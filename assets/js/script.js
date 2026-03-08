@@ -212,6 +212,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* ===== RE-LOAD IFRAME (for better performance) ===== */
+  const iframe = document.querySelector('.contact-form-wrap iframe');
+  const originalSrc = iframe.src;
+  let formSubmitted = false;
+
+  // Listen for iframe load events
+  iframe.addEventListener('load', () => {
+    if (formSubmitted) {
+      // Form was submitted, reset back
+      setTimeout(() => {
+        iframe.src = originalSrc;
+        formSubmitted = false;
+      }, 1000);
+    } else {
+      // First load, mark as ready
+      formSubmitted = true;
+    }
+  });
 
   /* ===== CURRENT YEAR IN FOOTER ===== */
   const yearEl = document.getElementById('year');
