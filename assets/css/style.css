@@ -819,7 +819,12 @@ section { padding: 96px 0; }
   border-radius: var(--r-lg);
   padding: 10px;
   overflow:hidden;
-  height:500px;
+  height:430px;
+}
+
+.contact-form-wrap iframe {
+  position: relative;
+  top: -60px;
 }
 #contactForm { display: flex; flex-direction: column; gap: 20px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
