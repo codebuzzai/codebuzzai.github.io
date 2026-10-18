@@ -85,21 +85,58 @@
   dob.max = toISO(new Date(today.getFullYear() - 15, today.getMonth(), today.getDate()));
   dob.min = toISO(new Date(today.getFullYear() - 60, today.getMonth(), today.getDate()));
 
-  var minStart = addDays(today, 1), maxStart = addDays(today, 365);
-  fromDate.min = toISO(minStart);
-  fromDate.max = toISO(maxStart);
-
+  /* ---------- Internship period: scheduled batch or custom dates ---------- */
   var DAYS = CFG.internshipDays || 14;
+  var batch = $('batch');
+  var customConsent = $('customConsent');
+
+  // Custom dates: start from tomorrow, and the 2 weeks must end by customLastDay (31 Dec 2026)
+  var lastDay = fromISO(CFG.customLastDay || '2026-12-31');
+  fromDate.min = toISO(addDays(today, 1));
+  fromDate.max = toISO(addDays(lastDay, -(DAYS - 1)));
+
+  // Scheduled batches that haven't started yet
+  batch.appendChild(opt('', 'Select a batch'));
+  (CFG.batches || []).forEach(function (s, i) {
+    var start = fromISO(s), end = addDays(start, DAYS - 1);
+    var o = opt(s, 'Batch ' + pad(i + 1) + ' · ' + nice(start) + ' → ' + nice(end));
+    if (start <= today) { o.disabled = true; o.textContent += ' (closed)'; }
+    batch.appendChild(o);
+  });
+
+  function mode() { return form.querySelector('input[name="dateMode"]:checked').value; }
+  function startValue() { return mode() === 'custom' ? fromDate.value : batch.value; }
+
   function syncPeriod() {
-    if (!fromDate.value) { toDate.value = ''; $('periodNote').hidden = true; return; }
-    var start = fromISO(fromDate.value), end = addDays(start, DAYS - 1);
+    var s = startValue();
+    if (!s) { toDate.value = ''; $('periodNote').hidden = true; return; }
+    var start = fromISO(s), end = addDays(start, DAYS - 1);
     toDate.value = toISO(end);
     toDate.min = toDate.max = toISO(end);
     $('periodText').textContent = 'Your internship: ' + nice(start) + ' → ' + nice(end) + ' (2 weeks)';
     $('periodNote').hidden = false;
   }
+
+  function syncMode() {
+    var custom = mode() === 'custom';
+    showWrap('scheduledWrap', !custom);
+    showWrap('customWrap', custom);
+    $('customConsentWrap').hidden = !custom;
+    if (!custom) { customConsent.checked = false; $('customConsentWrap').classList.remove('invalid'); }
+    clearErr(batch); clearErr(fromDate);
+    syncPeriod();
+  }
+
+  form.querySelectorAll('input[name="dateMode"]').forEach(function (r) { r.addEventListener('change', syncMode); });
+  batch.addEventListener('change', syncPeriod);
   fromDate.addEventListener('change', syncPeriod);
   fromDate.addEventListener('input', syncPeriod);
+
+  // Pre-select the batch chosen on the landing page (register.html?start=YYYY-MM-DD)
+  var startParam = new URLSearchParams(location.search).get('start');
+  var picked = startParam && batch.querySelector('option[value="' + startParam.replace(/[^\d-]/g, '') + '"]');
+  if (picked && !picked.disabled) batch.value = startParam;
+  syncMode(); // also restores the right view if the browser kept "Custom dates" checked on back/refresh
 
   /* ---------- Phone: digits only ---------- */
   var phone = $('phone');
@@ -134,7 +171,8 @@
     courseOther: function () { return course.value !== OTHERS || clean(courseOther.value).length >= 2; },
     year:        function () { return !!year.value; },
     address:     function () { return clean($('address').value).length >= 10; },
-    fromDate:    function () { return inRange(fromDate.value, fromDate.min, fromDate.max); }
+    batch:       function () { return mode() === 'custom' || (!!batch.value && !batch.selectedOptions[0].disabled); },
+    fromDate:    function () { return mode() !== 'custom' || inRange(fromDate.value, fromDate.min, fromDate.max); }
   };
 
   function validateField(id) { return setErr($(id), !checks[id]()); }
@@ -148,12 +186,13 @@
 
   var consent = $('consent');
   consent.addEventListener('change', function () { $('consentWrap').classList.toggle('invalid', !consent.checked); });
+  customConsent.addEventListener('change', function () { $('customConsentWrap').classList.toggle('invalid', !customConsent.checked); });
 
   // Hide the summary error once every highlighted field has been fixed
   form.addEventListener('input', hideErrorIfClean);
   form.addEventListener('change', hideErrorIfClean);
   function hideErrorIfClean() {
-    if (!form.querySelector('.field.invalid') && !$('consentWrap').classList.contains('invalid')) $('formError').classList.remove('show');
+    if (!form.querySelector('.field.invalid, .consent.invalid')) $('formError').classList.remove('show');
   }
 
   /* ---------- Submit ---------- */
@@ -175,6 +214,7 @@
       ok = ok && good;
     });
     if (!consent.checked) { $('consentWrap').classList.add('invalid'); ok = false; if (!first) first = consent; }
+    if (mode() === 'custom' && !customConsent.checked) { $('customConsentWrap').classList.add('invalid'); ok = false; if (!first) first = customConsent; }
     if (!ok) {
       showError('Please fix the highlighted fields.');
       if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { first.focus({ preventScroll: true }); }, 400); }
@@ -195,8 +235,10 @@
       courseIsOther:  course.value === OTHERS,
       collegeYear:    +year.value,
       homeAddress:    $('address').value.trim(),
-      internshipFrom: fromDate.value,
+      internshipFrom: startValue(),
       internshipTo:   toDate.value,
+      dateMode:       mode(),
+      customDatesConsent: mode() === 'custom',
       consent:        true
     };
 

@@ -21,7 +21,7 @@
   --muted:    #8B949E;
   --dim:      #6E7681;
   --error:    #FF6B6B;
-  --font-d:   'Syne', 'DM Sans', sans-serif;
+  --font-d:   'DM Sans', system-ui, sans-serif;
   --font-b:   'DM Sans', system-ui, sans-serif;
   --font-m:   'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --r:        14px;
@@ -239,6 +239,22 @@ section { position: relative; }
 .hl p { color: var(--muted); font-size: .94rem; }
 .hl .tag { position: absolute; top: 22px; right: 22px; font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 
+/* ---------- Batches ---------- */
+.batches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.batch {
+  display: flex; flex-direction: column; gap: 10px; padding: 28px 26px; border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: transform .45s var(--ease), border-color .45s;
+}
+.batch:hover { transform: translateY(-6px); border-color: rgba(0,194,255,.4); }
+.batch-no { font-size: .74rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
+.batch-dates { font-family: var(--font-d); font-size: 1.3rem; font-weight: 700; letter-spacing: -.01em; }
+.batch-dates i { font-style: normal; color: var(--dim); font-weight: 500; }
+.batch-cta { margin-top: auto; padding-top: 8px; font-size: .86rem; font-weight: 600; color: var(--muted); }
+.batch:hover .batch-cta { color: var(--brand-lt); }
+.batch.closed { opacity: .45; pointer-events: none; }
+.batch.closed .batch-cta { color: var(--dim); }
+
 /* ---------- Curriculum ---------- */
 .tracks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .track {
@@ -446,6 +462,26 @@ textarea.ctrl { min-height: 104px; resize: vertical; }
   border-radius: 12px; background: rgba(0,194,255,.07); border: 1px dashed rgba(0,194,255,.3);
   font-size: .88rem; color: var(--brand-lt);
 }
+.mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.mode-opt {
+  display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; border-radius: 14px; cursor: pointer;
+  background: var(--bg); border: 1.5px solid var(--border); transition: border-color .25s, background .25s;
+}
+.mode-opt:hover { border-color: #444c56; }
+.mode-opt input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand); flex-shrink: 0; }
+.mode-opt strong { display: block; font-size: .95rem; font-weight: 600; }
+.mode-opt small { display: block; margin-top: 2px; font-size: .8rem; color: var(--muted); }
+.mode-opt:has(input:checked) { border-color: var(--brand); background: rgba(0,194,255,.06); }
+.mode-opt:has(input:focus-visible) { box-shadow: 0 0 0 4px rgba(0,194,255,.14); }
+#customWrap.open { display: block; }
+.warn-note {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; padding: 12px 16px;
+  border-radius: 12px; background: rgba(255,107,53,.08); border: 1px solid rgba(255,107,53,.35);
+  font-size: .86rem; line-height: 1.5; color: #FFB899;
+}
+.warn-note svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+.consent + .consent { margin-top: 14px; }
+.consent[hidden] { display: none; }
 .consent { display: flex; gap: 12px; align-items: flex-start; font-size: .9rem; color: var(--muted); cursor: pointer; }
 .consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--brand); flex-shrink: 0; }
 .consent.invalid { color: var(--error); }
@@ -497,16 +533,16 @@ textarea.ctrl { min-height: 104px; resize: vertical; }
 @media (max-width: 1000px) {
   .hero-grid, .split { grid-template-columns: 1fr; }
   .hero-visual { max-width: 560px; }
-  .highlights { grid-template-columns: repeat(2, 1fr); }
+  .highlights, .batches { grid-template-columns: repeat(2, 1fr); }
   .reg-grid { grid-template-columns: 1fr; }
   .side { position: static; order: -1; }
 }
 @media (max-width: 680px) {
   .section { padding: 90px 0; }
   .container { padding: 0 16px; }
-  .highlights, .tracks { grid-template-columns: 1fr; }
+  .highlights, .tracks, .batches { grid-template-columns: 1fr; }
   .track { flex-direction: column; gap: 10px; padding: 28px; }
-  .row { grid-template-columns: 1fr; }
+  .row, .mode-toggle { grid-template-columns: 1fr; }
   .form-card, .pay-card { padding: 26px 20px; }
   .hero-stats { gap: 24px; }
   .hero-stats strong { font-size: 1.5rem; }

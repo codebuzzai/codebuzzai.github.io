@@ -124,4 +124,15 @@
     }, { threshold: .4 });
     io.observe(mock);
   }
+
+  /* ---------- Batches: close a batch once it has started ---------- */
+  var d = new Date();
+  var todayISO = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  document.querySelectorAll('.batch[data-start]').forEach(function (b) {
+    if (b.getAttribute('data-start') <= todayISO) {
+      b.classList.add('closed');
+      b.removeAttribute('href');
+      b.querySelector('.batch-cta').textContent = 'Registration closed';
+    }
+  });
 })();
