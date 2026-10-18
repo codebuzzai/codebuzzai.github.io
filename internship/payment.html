@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment · CodeBuzz AI Internship Program</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+</head>
+<body>
+
+  <div class="fx" aria-hidden="true">
+    <div class="grid-bg"></div>
+    <div class="orb o1"></div>
+    <div class="orb o2"></div>
+  </div>
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home">
+        <div class="logo-badge">CB</div>
+        <span>CodeBuzz<span class="accent">.ai</span></span>
+      </a>
+      <a href="./" class="btn btn-ghost btn-sm">Internship program</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="page-top" style="padding-bottom:36px">
+      <div class="container" style="text-align:center">
+        <div class="stepper" style="justify-content:center;margin-top:0">
+          <div class="st done"><b>✓</b>Your details</div>
+          <div class="bar"></div>
+          <div class="st active"><b>2</b>Payment</div>
+          <div class="bar"></div>
+          <div class="st"><b>3</b>Student login</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="pay-card reveal" id="payCard">
+          <div class="success-ring">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <h1>You're registered!</h1>
+          <p>Complete the payment to confirm your seat in the CodeBuzz AI Internship Program.</p>
+
+          <div class="reg-id">
+            <span id="regId">—</span>
+            <button class="copy-btn" id="copyBtn" type="button">Copy</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--dim)">Your registration ID — please save it</div>
+
+          <div class="summary" id="summary">
+            <div><span>Name</span><b id="sName">Loading…</b></div>
+            <div><span>Internship period</span><b id="sPeriod">Loading…</b></div>
+            <div><span>Payment</span><b class="pending" id="sPay">Pending</b></div>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="payBtn" style="width:100%">
+            Proceed to payment
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="pay-note" id="payNote">Pay securely with UPI, cards or net banking.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <span>&copy; <span data-year></span> CodeBuzz.ai · <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+    </div>
+  </footer>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script>
+  (function () {
+    var CFG = window.CB_INTERNSHIP || {};
+    var params = new URLSearchParams(location.search);
+    var id = (params.get('id') || '').trim().toUpperCase();
+    if (!id) { try { id = sessionStorage.getItem('cbi_reg_id') || ''; } catch (_) {} }
+
+    var $ = function (x) { return document.getElementById(x); };
+    function fmt(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+    if (!/^CBI\d{2}-[A-Z0-9]{6}$/.test(id)) {
+      $('regId').textContent = 'Not found';
+      $('summary').style.display = 'none';
+      $('payBtn').disabled = true;
+      $('payNote').innerHTML = 'We couldn’t find your registration. Please <a href="register.html" style="color:var(--brand)">register again</a> or write to info@codebuzz.ai.';
+      $('payNote').className = 'pay-note pay-error';
+      return;
+    }
+
+    $('regId').textContent = id;
+    $('copyBtn').addEventListener('click', function () {
+      var done = function () { $('copyBtn').textContent = 'Copied'; setTimeout(function () { $('copyBtn').textContent = 'Copy'; }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(id).then(done, done); else done();
+    });
+
+    fetch(CFG.apiBase + '/api/internship/registrations/' + encodeURIComponent(id))
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        $('sName').textContent = d.name;
+        $('sPeriod').textContent = fmt(d.internshipFrom) + ' → ' + fmt(d.internshipTo);
+        if (d.paymentDone === 'Yes') {
+          $('sPay').textContent = 'Paid'; $('sPay').className = '';
+          $('sPay').style.color = 'var(--green)';
+          $('payBtn').disabled = true; $('payBtn').firstChild.textContent = 'Payment complete ';
+          $('payNote').textContent = 'Your seat is confirmed. Your student login details will be sent to your email.';
+        }
+      })
+      .catch(function () {
+        $('sName').textContent = '—'; $('sPeriod').textContent = '—';
+      });
+
+    $('payBtn').addEventListener('click', function () {
+      if (!CFG.paymentsEnabled) {
+        $('payNote').textContent = 'Online payment is being set up. We’ll email you the payment link shortly — your registration is saved.';
+        return;
+      }
+      // Razorpay checkout is wired up here in the next step.
+    });
+  })();
+  </script>
+</body>
+</html>
