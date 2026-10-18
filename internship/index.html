@@ -46,9 +46,13 @@
         <li><a href="#curriculum">What you'll learn</a></li>
         <li><a href="#journey">Two weeks</a></li>
         <li><a href="#batches">Batches</a></li>
+        <li><a href="#refer">Refer &amp; earn</a></li>
         <li><a href="#faq">FAQ</a></li>
       </ul>
-      <a href="register.html" class="btn btn-primary btn-sm">Register now</a>
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-ghost btn-sm">Student login</a>
+        <a href="register.html" class="btn btn-primary btn-sm">Register now</a>
+      </div>
     </div>
   </nav>
 
@@ -313,8 +317,12 @@
           </div>
           <ul class="feature-list">
             <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg><span><strong>Your unique registration ID</strong> is created the moment you register.</span></li>
-            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg><span><strong>Login details</strong> are shared with you once your registration is confirmed.</span></li>
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg><span><strong>Log in with your unique ID</strong> and set your own password the first time.</span></li>
+            <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg><span><strong>See everything in one place</strong> — your details, batch, payment, referral code and cashback.</span></li>
           </ul>
+          <a href="login.html" class="btn btn-ghost" style="margin-top:28px">Go to student login
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
         </div>
         <div class="reveal d1">
           <div class="login-mock" id="loginMock">
@@ -329,6 +337,35 @@
               <div class="step-mini" data-step><span class="ck"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>Certificate issued<span class="when">Step 4</span></div>
             </div>
             <div class="progress"><i id="lmProgress"></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REFER & EARN ===== -->
+    <section class="section" id="refer" style="padding-top:0">
+      <div class="container">
+        <div class="refer reveal">
+          <div class="refer-copy">
+            <span class="eyebrow">Refer &amp; earn</span>
+            <h2>Bring your friends.<br /><span class="grad">Earn &#8377;100 each.</span></h2>
+            <p>Once your payment is complete, you get your own referral code. Share it with friends — for every friend who joins and pays, you get <strong>&#8377;100 cashback</strong>. There's no limit: refer 5 friends, earn &#8377;500.</p>
+            <ol class="refer-steps">
+              <li><b>1</b><span><strong>Complete your payment</strong>Your personal referral code appears on the payment page and in your student login.</span></li>
+              <li><b>2</b><span><strong>Share your code</strong>Friends enter it in the &ldquo;Referral code&rdquo; field when they register.</span></li>
+              <li><b>3</b><span><strong>Get &#8377;100 per friend</strong>Cashback is earned when your friend's payment is complete. Track it in your student login.</span></li>
+            </ol>
+          </div>
+          <div class="refer-visual" aria-hidden="true">
+            <div class="refer-card" id="referCard">
+              <small>Your referral code</small>
+              <div class="refer-code">PRIYA-7K4QM</div>
+              <div class="refer-stats">
+                <div><strong id="referCount">0</strong><span>friends joined</span></div>
+                <div><strong>&#8377;<span id="referEarned">0</span></strong><span>cashback earned</span></div>
+              </div>
+              <div class="refer-coins"><i>&#8377;100</i><i>&#8377;100</i><i>&#8377;100</i></div>
+            </div>
           </div>
         </div>
       </div>
@@ -357,6 +394,10 @@
           <details>
             <summary>How do I check my status?<span class="pm"></span></summary>
             <p>You'll get a separate student login to check your registration, payment and internship status at any time.</p>
+          </details>
+          <details>
+            <summary>How does the referral cashback work?<span class="pm"></span></summary>
+            <p>After your payment, you get a personal referral code (it's different from your registration ID). When a friend enters your code while registering and completes their payment, you earn &#8377;100 cashback. You can refer as many friends as you like and track every referral in your student login.</p>
           </details>
           <details>
             <summary>What happens after I register?<span class="pm"></span></summary>

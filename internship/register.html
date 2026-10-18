@@ -198,6 +198,20 @@
             </div>
           </fieldset>
 
+          <!-- Referral -->
+          <fieldset class="fset">
+            <legend><span>05</span>Referral code <small class="muted" style="font-family:var(--font-b);font-weight:500;font-size:.85rem">(optional)</small></legend>
+            <div class="row">
+              <div class="field">
+                <label for="referralCode">Referral code</label>
+                <input class="ctrl" id="referralCode" name="referralCode" type="text" placeholder="e.g. PRIYA-7K4QM" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;font-family:var(--font-m);letter-spacing:.06em" />
+                <span class="err">This referral code isn't valid. Check it, or leave it empty.</span>
+                <span class="ref-status" id="refStatus" aria-live="polite"></span>
+              </div>
+            </div>
+            <p class="hint" style="color:var(--dim);font-size:.82rem;margin-top:10px">Got a code from a friend who's already enrolled? Enter it here.</p>
+          </fieldset>
+
           <label class="consent" id="consentWrap">
             <input type="checkbox" id="consent" name="consent" required />
             <span>I confirm that the details above are correct and agree to CodeBuzz.ai storing them to process my internship registration.</span>

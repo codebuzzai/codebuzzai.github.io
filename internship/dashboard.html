@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Internship · CodeBuzz AI Internship Program</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <button class="btn btn-ghost btn-sm" id="logout" type="button">Log out</button>
+    </div>
+  </nav>
+
+  <main class="portal">
+    <div class="container">
+      <div class="portal-head">
+        <div>
+          <span class="eyebrow">Student portal</span>
+          <h1 id="hello">Loading your internship&hellip;</h1>
+          <p id="sub" class="mono"></p>
+        </div>
+      </div>
+
+      <div class="msg" id="m" role="alert"></div>
+
+      <div class="cards" id="content" hidden>
+        <div class="card wide">
+          <div class="stat-row">
+            <div class="stat"><strong id="st-intern">&mdash;</strong><span>Internship</span></div>
+            <div class="stat"><strong id="st-pay">&mdash;</strong><span>Payment</span></div>
+            <div class="stat"><strong id="st-friends">0</strong><span>Friends joined</span></div>
+            <div class="stat"><strong id="st-cash">&#8377;0</strong><span>Cashback earned</span></div>
+          </div>
+        </div>
+
+        <!-- Referral code -->
+        <div class="card wide" id="refCard"></div>
+
+        <div class="card">
+          <h2>Internship details <span class="tag" id="intern-tag"></span></h2>
+          <dl class="kv" id="intern"></dl>
+        </div>
+
+        <div class="card">
+          <h2>Payment <span class="tag" id="pay-tag"></span></h2>
+          <dl class="kv" id="pay"></dl>
+          <div id="pay-action"></div>
+        </div>
+
+        <div class="card wide">
+          <h2>Referrals &amp; cashback</h2>
+          <dl class="kv" id="ref-by" style="margin-bottom:18px"></dl>
+          <div class="stat-row" style="margin-bottom:18px">
+            <div class="stat"><strong id="rt-ref">0</strong><span>Friends referred</span></div>
+            <div class="stat"><strong id="rt-earned">&#8377;0</strong><span>Cashback earned</span></div>
+            <div class="stat"><strong id="rt-paid">&#8377;0</strong><span>Cashback paid to you</span></div>
+            <div class="stat"><strong id="rt-due">&#8377;0</strong><span>Cashback to be paid</span></div>
+          </div>
+          <div class="table-wrap" id="ref-table"></div>
+          <p class="muted" style="font-size:.82rem;margin-top:12px">Cashback is earned when your friend completes their payment. CodeBuzz.ai sends it to your registered mobile number by UPI/bank transfer; the transaction reference appears here.</p>
+        </div>
+
+        <div class="card">
+          <h2>My details</h2>
+          <dl class="kv" id="me"></dl>
+        </div>
+
+        <div class="card">
+          <h2>Change password</h2>
+          <form id="f-pw" novalidate>
+            <div class="field">
+              <label for="cur">Current password</label>
+              <div class="pw-wrap"><input class="ctrl" id="cur" type="password" autocomplete="current-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+            </div>
+            <div class="field" style="margin-top:14px">
+              <label for="npw">New password</label>
+              <div class="pw-wrap"><input class="ctrl" id="npw" type="password" autocomplete="new-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+            </div>
+            <div class="field" style="margin-top:14px">
+              <label for="npw2">Confirm new password</label>
+              <div class="pw-wrap"><input class="ctrl" id="npw2" type="password" autocomplete="new-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+            </div>
+            <button class="btn btn-ghost" type="submit" style="margin-top:18px">Update password</button>
+          </form>
+          <div class="msg" id="m-pw" role="alert"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" style="margin-top:60px">
+    <div class="container">
+      <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <span>Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+    </div>
+  </footer>
+
+  <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/portal.js"></script>
+  <script>
+  (function () {
+    var P = window.Portal, $ = function (x) { return document.getElementById(x); }, e = P.esc;
+    if (!P.token('student')) { location.replace('login.html'); return; }
+    P.wirePasswordToggles();
+
+    $('logout').addEventListener('click', function () { P.store('student', ''); location.replace('login.html'); });
+
+    function kv(el, rows) {
+      el.innerHTML = rows.filter(function (r) { return r; }).map(function (r) { return '<dt>' + e(r[0]) + '</dt><dd>' + (r[2] ? r[1] : e(r[1])) + '</dd>'; }).join('');
+    }
+    var STATE = { upcoming: ['Upcoming', 'blue'], in_progress: ['In progress', 'green'], completed: ['Completed', 'green'], unknown: ['—', ''] };
+    var REWARD = { pending: ['Waiting for friend’s payment', 'amber'], earned: ['Earned — to be paid', 'blue'], paid: ['Paid to you', 'green'], cancelled: ['Cancelled', 'red'] };
+    function tag(el, text, cls) { el.textContent = text; el.className = 'tag ' + (cls || ''); }
+
+    P.api('/student/me', { auth: 'student' }).then(function (r) {
+      if (!r.ok) return P.msg($('m'), r.data.message || 'Could not load your details.');
+      var d = r.data, s = d.student, i = d.internship, p = d.payment, ref = d.referral;
+
+      $('hello').textContent = 'Hi, ' + s.fullName.split(' ')[0];
+      $('sub').textContent = 'Unique ID: ' + s.registrationId;
+      $('content').hidden = false;
+
+      // Summary
+      var st = STATE[i.state] || STATE.unknown;
+      $('st-intern').textContent = st[0];
+      $('st-pay').textContent = p.paymentDone === 'Yes' ? 'Paid' : 'Pending';
+      $('st-pay').style.color = p.paymentDone === 'Yes' ? 'var(--green)' : '#FEBC2E';
+      $('st-friends').textContent = ref.totals.joined;
+      $('st-cash').textContent = P.inr(ref.totals.earnedInr);
+
+      // Referral code card
+      if (ref.code) {
+        var wa = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program (2 weeks, certificate included). Use my referral code ' + ref.code + ' when you register: ' + ref.shareUrl);
+        $('refCard').innerHTML =
+          '<h2>Your referral code <span class="tag green">Earn ' + P.inr(ref.rewardPerReferralInr) + ' per friend</span></h2>' +
+          '<div class="copy-inline"><span class="ref-code-sm" style="font-size:1.4rem">' + e(ref.code) + '</span>' +
+          '<button class="copy-btn" id="cp-code" type="button">Copy code</button>' +
+          '<button class="copy-btn" id="cp-link" type="button">Copy link</button>' +
+          '<a class="copy-btn" href="' + e(wa) + '" target="_blank" rel="noopener">Share on WhatsApp</a></div>' +
+          '<p class="muted" style="font-size:.88rem;margin-top:14px">Friends enter this code in the “Referral code” field when they register. You earn ' + P.inr(ref.rewardPerReferralInr) + ' for every friend who completes their payment — no limit.</p>';
+        $('cp-code').onclick = function () { P.copy(ref.code, this, 'Copy code'); };
+        $('cp-link').onclick = function () { P.copy(ref.shareUrl, this, 'Copy link'); };
+      } else {
+        $('refCard').innerHTML =
+          '<h2>Your referral code <span class="tag amber">After payment</span></h2>' +
+          '<p class="muted">Complete your payment to get your personal referral code. Then earn ' + P.inr(ref.rewardPerReferralInr) + ' cashback for every friend who joins with it.</p>';
+      }
+
+      // Internship
+      tag($('intern-tag'), st[0], st[1]);
+      kv($('intern'), [
+        ['Program', 'CodeBuzz AI Internship Program'],
+        ['Type', i.dateMode === 'custom' ? 'Custom dates' : 'Scheduled batch' + (i.batchNumber ? ' · Batch ' + String(i.batchNumber).padStart(2, '0') : '')],
+        ['From', P.date(i.from)],
+        ['To', P.date(i.to)],
+        ['Duration', '2 weeks'],
+        i.dateMode === 'custom' ? ['Note', 'Custom dates need at least 10 students from your college. Otherwise you’ll be moved to the nearest scheduled batch.'] : null
+      ]);
+
+      // Payment
+      tag($('pay-tag'), p.paymentDone === 'Yes' ? 'Paid' : 'Pending', p.paymentDone === 'Yes' ? 'green' : 'amber');
+      kv($('pay'), [
+        ['Fee', P.inr(p.feeInr)],
+        ['Status', p.paymentDone === 'Yes' ? 'Paid' : 'Not paid yet'],
+        p.paymentDone === 'Yes' ? ['Amount paid', P.inr(p.amountPaidInr)] : null,
+        p.paymentId ? ['Payment ID', '<span class="mono">' + e(p.paymentId) + '</span>', true] : null,
+        p.paidAt ? ['Paid on', P.date(p.paidAt)] : null,
+        ['Attempts', String(p.attempts.length)]
+      ]);
+      if (p.paymentDone !== 'Yes') {
+        $('pay-action').innerHTML = '<a class="btn btn-primary" style="margin-top:18px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Pay ' + P.inr(p.feeInr) + '</a>';
+      }
+
+      // Referred by
+      kv($('ref-by'), [
+        ['Referred by', ref.referredBy ? e(ref.referredBy.name) + ' <span class="muted mono">(' + e(ref.referredBy.code) + ')</span>' : 'No one', true]
+      ]);
+      $('rt-ref').textContent = ref.totals.referred;
+      $('rt-earned').textContent = P.inr(ref.totals.earnedInr);
+      $('rt-paid').textContent = P.inr(ref.totals.paidOutInr);
+      $('rt-due').textContent = P.inr(ref.totals.dueInr);
+      if (!ref.referrals.length) {
+        $('ref-table').innerHTML = '<div class="empty">' + (ref.code ? 'No referrals yet. Share your code to start earning.' : 'Referrals will appear here once you start sharing your code.') + '</div>';
+      } else {
+        $('ref-table').innerHTML = '<table class="tbl"><thead><tr><th>Friend</th><th>Registered</th><th>Their payment</th><th>Cashback</th><th class="num">Amount</th><th>Paid to you</th></tr></thead><tbody>' +
+          ref.referrals.map(function (x) {
+            var rs = REWARD[x.rewardStatus] || [x.rewardStatus, ''];
+            return '<tr><td>' + e(x.name) + '</td><td>' + P.date(x.registeredOn) + '</td>' +
+              '<td>' + (x.paymentDone === 'Yes' ? '<span class="tag green">Paid</span>' : '<span class="tag amber">Pending</span>') + '</td>' +
+              '<td><span class="tag ' + rs[1] + '">' + rs[0] + '</span></td><td class="num">' + P.inr(x.amountInr) + '</td>' +
+              '<td>' + (x.paidOn ? P.date(x.paidOn) + '<br><span class="muted mono">' + e(x.payoutReference) + '</span>' : '<span class="muted">—</span>') + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
+
+      // My details
+      kv($('me'), [
+        ['Unique ID', '<span class="mono">' + e(s.registrationId) + '</span>', true],
+        ['Name', s.fullName], ['Father’s name', s.fatherName], ['Date of birth', P.date(s.dateOfBirth)],
+        ['Email', s.email], ['Mobile', '+91 ' + s.phone], ['College', s.college],
+        ['Degree', s.degree + ' · ' + s.course], ['Year', s.collegeYear + ['', 'st', 'nd', 'rd', 'th', 'th'][s.collegeYear] + ' year'],
+        ['Address', s.homeAddress], ['Registered on', P.date(s.registeredAt)]
+      ]);
+    });
+
+    $('f-pw').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      var body = { currentPassword: $('cur').value, password: $('npw').value, confirmPassword: $('npw2').value };
+      if (!P.PW_RULE.test(body.password)) return P.msg($('m-pw'), 'New password must be 8–72 characters with a letter and a number.');
+      if (body.password !== body.confirmPassword) return P.msg($('m-pw'), 'Passwords don’t match.');
+      P.busy(btn, true, 'Saving…');
+      P.api('/student/change-password', { body: body, auth: 'student', noRedirect: true }).then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-pw'), r.data.message || 'Could not update the password.');
+        P.store('student', r.data.token);
+        $('f-pw').reset();
+        P.msg($('m-pw'), 'Password updated.', 'ok');
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · CodeBuzz AI Internship Program</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div></div>
+  <nav class="nav scrolled">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span> <span class="muted" style="font-weight:500">Admin</span></span></a>
+      <div class="nav-actions">
+        <button class="btn btn-ghost btn-sm" id="refresh" type="button" hidden>Refresh</button>
+        <button class="btn btn-ghost btn-sm" id="logout" type="button" hidden>Log out</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Login -->
+  <main class="auth-wrap" id="loginView" hidden>
+    <div class="auth-card">
+      <span class="eyebrow">Internship admin</span>
+      <h1>Admin login</h1>
+      <p class="sub">For CodeBuzz.ai staff only.</p>
+      <form id="f-login" novalidate>
+        <div class="field">
+          <label for="u">Username</label>
+          <input class="ctrl" id="u" type="text" autocomplete="username" maxlength="60" />
+        </div>
+        <div class="field">
+          <label for="p">Password</label>
+          <div class="pw-wrap"><input class="ctrl" id="p" type="password" autocomplete="current-password" maxlength="200" /><button class="pw-toggle" type="button">Show</button></div>
+        </div>
+        <button class="btn btn-primary" type="submit">Log in</button>
+      </form>
+      <div class="msg" id="m-login" role="alert"></div>
+    </div>
+  </main>
+
+  <!-- App -->
+  <main class="portal" id="appView" hidden>
+    <div class="container">
+      <div class="portal-head">
+        <div><span class="eyebrow">CodeBuzz AI Internship Program</span><h1>Admin dashboard</h1></div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="on" data-tab="overview" type="button">Overview</button>
+        <button data-tab="students" type="button">Students</button>
+        <button data-tab="cashback" type="button">Referral cashback</button>
+      </div>
+      <div class="msg" id="m" role="alert"></div>
+
+      <!-- Overview -->
+      <section id="tab-overview">
+        <div class="stat-row" style="margin-bottom:20px">
+          <div class="stat"><strong id="o-reg">0</strong><span>Registered</span></div>
+          <div class="stat"><strong id="o-paid">0</strong><span>Paid</span></div>
+          <div class="stat"><strong id="o-rev">&#8377;0</strong><span>Fees collected</span></div>
+          <div class="stat"><strong id="o-due">&#8377;0</strong><span>Cashback to pay</span></div>
+        </div>
+        <div class="cards">
+          <div class="card wide">
+            <h2>Batches <span class="muted" style="font-weight:400;font-size:.85rem">click a batch to see its students</span></h2>
+            <div class="batch-grid" id="o-batches"></div>
+          </div>
+          <div class="card wide">
+            <h2>Referral cashback</h2>
+            <div class="stat-row">
+              <div class="stat"><strong id="o-r-pending">0</strong><span>Pending (friend not paid)</span></div>
+              <div class="stat"><strong id="o-r-earned">0</strong><span>Earned (to pay)</span></div>
+              <div class="stat"><strong id="o-r-paid">0</strong><span>Paid out</span></div>
+              <div class="stat"><strong id="o-r-cancel">0</strong><span>Cancelled</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Students -->
+      <section id="tab-students" hidden>
+        <div class="toolbar">
+          <input class="ctrl grow" id="q" type="search" placeholder="Search name, ID, email, phone, college, referral code" />
+          <select class="ctrl" id="f-batch"><option value="">All batches</option></select>
+          <select class="ctrl" id="f-pay"><option value="">Any payment</option><option value="Yes">Paid</option><option value="No">Not paid</option></select>
+          <select class="ctrl" id="f-ref"><option value="">Any referral</option><option value="referred">Was referred</option><option value="referrer">Has referred others</option></select>
+          <button class="btn btn-ghost btn-sm" id="csv-students" type="button">Export CSV</button>
+        </div>
+        <p class="muted" id="s-count" style="font-size:.85rem;margin-bottom:10px"></p>
+        <div class="table-wrap" id="s-table"></div>
+      </section>
+
+      <!-- Cashback -->
+      <section id="tab-cashback" hidden>
+        <div class="toolbar">
+          <select class="ctrl" id="f-rstatus">
+            <option value="earned">Earned &mdash; to pay</option>
+            <option value="pending">Pending (friend not paid)</option>
+            <option value="paid">Paid out</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="">All</option>
+          </select>
+          <input class="ctrl grow" id="rq" type="search" placeholder="Search referrer or friend" />
+          <button class="btn btn-ghost btn-sm" id="csv-rewards" type="button">Export CSV</button>
+        </div>
+        <p class="muted" id="r-count" style="font-size:.85rem;margin-bottom:10px"></p>
+        <div class="table-wrap" id="r-table"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Student drawer -->
+  <div class="drawer-bg" id="drawerBg"></div>
+  <aside class="drawer" id="drawer" aria-label="Student details">
+    <button class="btn btn-ghost btn-sm close" id="drawerClose" type="button">Close</button>
+    <div id="drawerBody"></div>
+  </aside>
+
+  <!-- Mark-paid modal -->
+  <div class="modal" id="payModal" role="dialog" aria-modal="true">
+    <div class="auth-card">
+      <h1 style="font-size:1.4rem">Mark cashback as paid</h1>
+      <p class="sub" id="pm-who"></p>
+      <form id="f-paid" novalidate>
+        <div class="field">
+          <label for="pm-ref">UPI / bank transaction reference</label>
+          <input class="ctrl" id="pm-ref" type="text" maxlength="100" placeholder="e.g. UPI ref no." />
+        </div>
+        <div class="field">
+          <label for="pm-note">Note (optional)</label>
+          <input class="ctrl" id="pm-note" type="text" maxlength="300" placeholder="e.g. Paid via GPay" />
+        </div>
+        <button class="btn btn-primary" type="submit">Mark as paid</button>
+        <button class="btn btn-ghost" type="button" id="pm-cancel" style="margin-top:10px">Cancel</button>
+      </form>
+      <div class="msg" id="m-paid" role="alert"></div>
+    </div>
+  </div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/portal.js"></script>
+  <script>
+  (function () {
+    var P = window.Portal, $ = function (x) { return document.getElementById(x); }, e = P.esc;
+    var state = { overview: null, students: [], rewards: [], payTarget: null };
+    P.wirePasswordToggles();
+
+    function show(view) {
+      $('loginView').hidden = view !== 'login';
+      $('appView').hidden = view !== 'app';
+      $('logout').hidden = $('refresh').hidden = view !== 'app';
+    }
+
+    // ---------- Login ----------
+    $('f-login').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      P.busy(btn, true, 'Logging in…');
+      P.api('/admin/login', { body: { username: $('u').value.trim(), password: $('p').value } }).then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-login'), r.data.message || 'Could not log in.');
+        P.store('admin', r.data.token);
+        $('p').value = '';
+        start();
+      });
+    });
+    $('logout').addEventListener('click', function () { P.store('admin', ''); location.reload(); });
+    $('refresh').addEventListener('click', function () { loadAll(); });
+
+    // ---------- Tabs ----------
+    function tab(name) {
+      document.querySelectorAll('[data-tab]').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === name); });
+      ['overview', 'students', 'cashback'].forEach(function (t) { $('tab-' + t).hidden = t !== name; });
+    }
+    document.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab(b.dataset.tab); }); });
+
+    // ---------- Data ----------
+    function loadAll() {
+      P.msg($('m'), '');
+      return Promise.all([
+        P.api('/admin/overview', { auth: 'admin' }),
+        P.api('/admin/students', { auth: 'admin' }),
+        P.api('/admin/referral-rewards', { auth: 'admin' })
+      ]).then(function (rs) {
+        var bad = rs.filter(function (r) { return !r.ok; })[0];
+        if (bad) return P.msg($('m'), bad.data.message || 'Could not load data.');
+        state.overview = rs[0].data; state.students = rs[1].data.students; state.rewards = rs[2].data.rewards;
+        renderOverview(); fillBatchFilter(); renderStudents(); renderRewards();
+      });
+    }
+    function start() { show('app'); loadAll(); }
+
+    function groupKey(s) { return (s.dateMode === 'custom' ? 'custom:' : 'batch:') + s.from; }
+    function groupLabel(g) { return g.label + ' · ' + P.date(g.from) + ' → ' + P.date(g.to); }
+
+    function renderOverview() {
+      var o = state.overview;
+      $('o-reg').textContent = o.totals.registered;
+      $('o-paid').textContent = o.totals.paid;
+      $('o-rev').textContent = P.inr(o.totals.revenueInr);
+      $('o-due').textContent = P.inr(o.referrals.earned.amountInr);
+      $('o-r-pending').textContent = o.referrals.pending.count + ' · ' + P.inr(o.referrals.pending.amountInr);
+      $('o-r-earned').textContent = o.referrals.earned.count + ' · ' + P.inr(o.referrals.earned.amountInr);
+      $('o-r-paid').textContent = o.referrals.paid.count + ' · ' + P.inr(o.referrals.paid.amountInr);
+      $('o-r-cancel').textContent = o.referrals.cancelled.count;
+      $('o-batches').innerHTML = o.groups.map(function (g) {
+        return '<button class="batch-tile" type="button" data-key="' + e(g.key) + '"><small>' + e(g.label) + '</small>' +
+          '<div class="dates">' + P.date(g.from) + ' → ' + P.date(g.to) + '</div>' +
+          '<div class="nums"><span><b>' + g.registered + '</b> registered</span><span><b>' + g.paid + '</b> paid</span></div>' +
+          '<div class="muted" style="font-size:.8rem;margin-top:8px">' + P.inr(g.revenueInr) + ' collected</div></button>';
+      }).join('') || '<div class="empty">No batches yet.</div>';
+      $('o-batches').querySelectorAll('[data-key]').forEach(function (b) {
+        b.addEventListener('click', function () { $('f-batch').value = b.dataset.key; renderStudents(); tab('students'); });
+      });
+    }
+
+    function fillBatchFilter() {
+      var cur = $('f-batch').value;
+      $('f-batch').innerHTML = '<option value="">All batches</option>' + state.overview.groups.map(function (g) {
+        return '<option value="' + e(g.key) + '">' + e(groupLabel(g)) + ' (' + g.registered + ')</option>';
+      }).join('');
+      $('f-batch').value = cur;
+    }
+
+    function filteredStudents() {
+      var q = $('q').value.trim().toLowerCase(), b = $('f-batch').value, pay = $('f-pay').value, rf = $('f-ref').value;
+      return state.students.filter(function (s) {
+        if (b && groupKey(s) !== b) return false;
+        if (pay && s.paymentDone !== pay) return false;
+        if (rf === 'referred' && !s.referredBy) return false;
+        if (rf === 'referrer' && !s.referredTotal) return false;
+        if (q) {
+          var hay = [s.registrationId, s.fullName, s.email, s.phone, s.college, s.referralCode, s.referredBy && s.referredBy.name, s.referredBy && s.referredBy.code].join(' ').toLowerCase();
+          if (hay.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    function batchText(s) { return s.dateMode === 'custom' ? 'Custom' : (s.batchNumber ? 'Batch ' + String(s.batchNumber).padStart(2, '0') : 'Batch'); }
+
+    function renderStudents() {
+      var list = filteredStudents();
+      $('s-count').textContent = list.length + ' of ' + state.students.length + ' students';
+      if (!list.length) { $('s-table').innerHTML = '<div class="empty">No students match these filters.</div>'; return; }
+      $('s-table').innerHTML = '<table class="tbl"><thead><tr><th>Unique ID</th><th>Name</th><th>College</th><th>Batch</th><th>Payment</th><th>Referred by</th><th class="num">Referred</th><th class="num">Cashback due</th></tr></thead><tbody>' +
+        list.map(function (s) {
+          return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="mono">' + e(s.registrationId) + '</td>' +
+            '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
+            '<td>' + e(s.college) + '<br><span class="muted" style="font-size:.8rem">' + e(s.degree) + ' · Yr ' + s.collegeYear + '</span></td>' +
+            '<td>' + batchText(s) + '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span></td>' +
+            '<td>' + (s.paymentDone === 'Yes' ? '<span class="tag green">Paid ' + P.inr(s.amountPaidInr) + '</span>' : '<span class="tag amber">Not paid</span>') + '</td>' +
+            '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
+            '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
+            '<td class="num">' + (s.cashbackDueInr ? P.inr(s.cashbackDueInr) : '<span class="muted">—</span>') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      $('s-table').querySelectorAll('tr[data-id]').forEach(function (tr) { tr.addEventListener('click', function () { openStudent(tr.dataset.id); }); });
+    }
+    ['q', 'f-batch', 'f-pay', 'f-ref'].forEach(function (id) { $(id).addEventListener('input', renderStudents); });
+
+    var RSTAT = { pending: ['Pending', 'amber'], earned: ['Earned — to pay', 'blue'], paid: ['Paid out', 'green'], cancelled: ['Cancelled', 'red'] };
+    function filteredRewards() {
+      var st = $('f-rstatus').value, q = $('rq').value.trim().toLowerCase();
+      return state.rewards.filter(function (w) {
+        if (st && w.status !== st) return false;
+        if (q && [w.referrer.name, w.referrer.registrationId, w.referrer.referralCode, w.referred.name, w.referred.registrationId].join(' ').toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+    }
+    function renderRewards() {
+      var list = filteredRewards();
+      var total = list.reduce(function (a, w) { return a + w.amountInr; }, 0);
+      $('r-count').textContent = list.length + ' entries · ' + P.inr(total);
+      if (!list.length) { $('r-table').innerHTML = '<div class="empty">Nothing here.</div>'; return; }
+      $('r-table').innerHTML = '<table class="tbl"><thead><tr><th>Referrer (pay to)</th><th>Friend referred</th><th>Status</th><th class="num">Amount</th><th>Dates</th><th>Payout reference</th><th></th></tr></thead><tbody>' +
+        list.map(function (w) {
+          var rs = RSTAT[w.status] || [w.status, ''];
+          var actions = '';
+          if (w.status === 'earned') actions += '<button class="copy-btn" data-pay="' + w.id + '" type="button">Mark paid</button> ';
+          if (w.status === 'earned' || w.status === 'pending') actions += '<button class="copy-btn" data-cancel="' + w.id + '" type="button">Cancel</button>';
+          return '<tr><td>' + e(w.referrer.name) + '<br><span class="muted mono">' + e(w.referrer.registrationId) + '</span><br><span class="muted">+91 ' + e(w.referrer.phone) + '</span></td>' +
+            '<td>' + e(w.referred.name) + '<br><span class="muted mono">' + e(w.referred.registrationId) + '</span></td>' +
+            '<td><span class="tag ' + rs[1] + '">' + rs[0] + '</span></td><td class="num">' + P.inr(w.amountInr) + '</td>' +
+            '<td style="font-size:.8rem">Referred ' + P.date(w.createdOn) + (w.earnedOn ? '<br>Earned ' + P.date(w.earnedOn) : '') + (w.paidAt ? '<br>Paid ' + P.date(w.paidAt) : '') + '</td>' +
+            '<td class="mono" style="font-size:.8rem">' + e(w.payoutReference) + (w.payoutNote ? '<br><span class="muted" style="font-family:var(--font-b)">' + e(w.payoutNote) + '</span>' : '') + '</td>' +
+            '<td style="white-space:nowrap">' + actions + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      $('r-table').querySelectorAll('[data-pay]').forEach(function (b) { b.addEventListener('click', function () { openPay(+b.dataset.pay); }); });
+      $('r-table').querySelectorAll('[data-cancel]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var note = window.prompt('Cancel this cashback? Optional reason:', '');
+          if (note === null) return;
+          P.api('/admin/referral-rewards/' + b.dataset.cancel + '/cancel', { body: { note: note }, auth: 'admin' }).then(function (r) {
+            if (!r.ok) return P.msg($('m'), r.data.message);
+            loadAll();
+          });
+        });
+      });
+    }
+    ['f-rstatus', 'rq'].forEach(function (id) { $(id).addEventListener('input', renderRewards); });
+
+    // ---------- Mark paid ----------
+    function openPay(id) {
+      var w = state.rewards.filter(function (x) { return x.id === id; })[0];
+      if (!w) return;
+      state.payTarget = w;
+      $('pm-who').textContent = P.inr(w.amountInr) + ' to ' + w.referrer.name + ' (+91 ' + w.referrer.phone + ') for referring ' + w.referred.name + '.';
+      $('pm-ref').value = ''; $('pm-note').value = ''; P.msg($('m-paid'), '');
+      $('payModal').classList.add('open');
+      setTimeout(function () { $('pm-ref').focus(); }, 50);
+    }
+    $('pm-cancel').addEventListener('click', function () { $('payModal').classList.remove('open'); });
+    $('f-paid').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      if ($('pm-ref').value.trim().length < 3) return P.msg($('m-paid'), 'Enter the transaction reference.');
+      P.busy(btn, true, 'Saving…');
+      P.api('/admin/referral-rewards/' + state.payTarget.id + '/mark-paid', { body: { reference: $('pm-ref').value.trim(), note: $('pm-note').value.trim() }, auth: 'admin' }).then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-paid'), r.data.message || 'Could not save.');
+        $('payModal').classList.remove('open');
+        loadAll();
+      });
+    });
+
+    // ---------- Student drawer ----------
+    function closeDrawer() { $('drawer').classList.remove('open'); $('drawerBg').classList.remove('open'); }
+    $('drawerClose').addEventListener('click', closeDrawer);
+    $('drawerBg').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeDrawer(); $('payModal').classList.remove('open'); } });
+
+    function kv(rows) {
+      return '<dl class="kv">' + rows.filter(Boolean).map(function (r) { return '<dt>' + e(r[0]) + '</dt><dd>' + (r[2] ? r[1] : e(r[1])) + '</dd>'; }).join('') + '</dl>';
+    }
+    function openStudent(id) {
+      $('drawerBody').innerHTML = '<p class="muted">Loading…</p>';
+      $('drawer').classList.add('open'); $('drawerBg').classList.add('open');
+      P.api('/admin/students/' + encodeURIComponent(id), { auth: 'admin' }).then(function (r) {
+        if (!r.ok) { $('drawerBody').innerHTML = '<p class="muted">' + e(r.data.message || 'Could not load.') + '</p>'; return; }
+        var s = r.data.student;
+        var html = '<span class="eyebrow">' + e(s.registrationId) + '</span><h2>' + e(s.fullName) + '</h2>' +
+          '<p class="muted">' + e(s.college) + '</p>' +
+          '<h3>Internship</h3>' + kv([
+            ['Type', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)], ['Dates', P.date(s.from) + ' → ' + P.date(s.to)]
+          ]) +
+          '<h3>Payment</h3>' + kv([
+            ['Status', s.paymentDone === 'Yes' ? '<span class="tag green">Paid</span>' : '<span class="tag amber">Not paid</span>', true],
+            s.paymentDone === 'Yes' ? ['Amount', P.inr(s.amountPaidInr)] : null,
+            s.paymentId ? ['Payment ID', '<span class="mono">' + e(s.paymentId) + '</span>', true] : null,
+            s.paidAt ? ['Paid on', P.date(s.paidAt)] : null
+          ]) +
+          (r.data.payments.length ? '<div class="table-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Order</th><th>Status</th><th class="num">Amount</th><th>When</th></tr></thead><tbody>' +
+            r.data.payments.map(function (p) {
+              return '<tr><td class="mono">' + e(p.orderId) + (p.paymentId ? '<br>' + e(p.paymentId) : '') + '</td><td>' + e(p.status) + (p.paidVia ? ' (' + e(p.paidVia) + ')' : '') + (p.failureReason ? '<br><span class="muted">' + e(p.failureReason) + '</span>' : '') + '</td><td class="num">' + P.inr(p.amountInr) + '</td><td style="font-size:.8rem">' + P.date(p.createdAt) + '</td></tr>';
+            }).join('') + '</tbody></table></div>' : '') +
+          '<h3>Referrals</h3>' + kv([
+            ['Own referral code', s.referralCode ? '<span class="mono">' + e(s.referralCode) + '</span>' : '<span class="muted">Issued after payment</span>', true],
+            ['Referred by', s.referredBy ? e(s.referredBy.name) + ' <span class="muted mono">' + e(s.referredBy.registrationId) + ' · ' + e(s.referredBy.code) + '</span>' : 'No one', true],
+            ['Friends referred', s.referredTotal + ' (' + s.referredJoined + ' paid)'],
+            ['Cashback', P.inr(s.cashbackDueInr) + ' to pay · ' + P.inr(s.cashbackPaidInr) + ' paid']
+          ]) +
+          (r.data.referrals.length ? '<div class="table-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Friend</th><th>Cashback</th><th class="num">Amount</th></tr></thead><tbody>' +
+            r.data.referrals.map(function (w) {
+              var rs = RSTAT[w.status] || [w.status, ''];
+              return '<tr><td>' + e(w.referred.name) + '<br><span class="muted mono">' + e(w.referred.registrationId) + '</span></td><td><span class="tag ' + rs[1] + '">' + rs[0] + '</span>' + (w.payoutReference ? '<br><span class="muted mono">' + e(w.payoutReference) + '</span>' : '') + '</td><td class="num">' + P.inr(w.amountInr) + '</td></tr>';
+            }).join('') + '</tbody></table></div>' : '') +
+          '<h3>Student details</h3>' + kv([
+            ['Father’s name', s.fatherName], ['Date of birth', P.date(s.dateOfBirth)], ['Email', s.email], ['Mobile', '+91 ' + s.phone],
+            ['Degree', s.degree + ' · ' + s.course], ['Year', String(s.collegeYear)], ['Address', s.homeAddress], ['Registered', P.date(s.registeredAt)]
+          ]) +
+          '<h3>Student login</h3>' + kv([
+            ['Activated', s.loginActivated], s.lastLoginAt ? ['Last login', P.date(s.lastLoginAt)] : null
+          ]) +
+          (s.loginActivated === 'Yes' ? '<button class="btn btn-ghost btn-sm" id="resetLogin" type="button" style="margin-top:14px">Reset login (student sets a new password)</button>' : '');
+        $('drawerBody').innerHTML = html;
+        var rl = $('resetLogin');
+        if (rl) rl.addEventListener('click', function () {
+          if (!window.confirm('Reset login for ' + s.fullName + '? They will set a new password after confirming their email and mobile.')) return;
+          P.api('/admin/students/' + encodeURIComponent(s.registrationId) + '/reset-login', { body: {}, auth: 'admin' }).then(function (x) {
+            if (x.ok) { openStudent(s.registrationId); loadAll(); } else P.msg($('m'), x.data.message);
+          });
+        });
+      });
+    }
+
+    // ---------- CSV export ----------
+    function csv(rows) {
+      return rows.map(function (r) { return r.map(function (v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
+    }
+    function download(name, text) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+      a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    }
+    $('csv-students').addEventListener('click', function () {
+      var rows = [['Unique ID', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Paid', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at']];
+      filteredStudents().forEach(function (s) {
+        rows.push([s.registrationId, s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, s.dateMode, s.batchNumber || '', s.from, s.to, s.paymentDone, s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt]);
+      });
+      download('internship-students.csv', csv(rows));
+    });
+    $('csv-rewards').addEventListener('click', function () {
+      var rows = [['Status', 'Amount', 'Referrer ID', 'Referrer', 'Referrer phone', 'Referral code', 'Friend ID', 'Friend', 'Referred on', 'Earned on', 'Paid at', 'Reference', 'Note']];
+      filteredRewards().forEach(function (w) {
+        rows.push([w.status, w.amountInr, w.referrer.registrationId, w.referrer.name, w.referrer.phone, w.referrer.referralCode, w.referred.registrationId, w.referred.name, w.createdOn, w.earnedOn, w.paidAt, w.payoutReference, w.payoutNote]);
+      });
+      download('internship-referral-cashback.csv', csv(rows));
+    });
+
+    // ---------- Boot ----------
+    if (P.token('admin')) start(); else show('login');
+  })();
+  </script>
+</body>
+</html>

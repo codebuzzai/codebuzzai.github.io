@@ -147,6 +147,27 @@
     phone.value = d.slice(0, 10);
   });
 
+  /* ---------- Referral code (optional): prefill from ?ref=, live check ---------- */
+  var REF_RE = /^[A-Z]{1,6}-[A-Z0-9]{5}$/;
+  var refInput = $('referralCode'), refStatus = $('refStatus'), refTimer = null;
+  var refParam = new URLSearchParams(location.search).get('ref');
+  if (refParam) refInput.value = refParam.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 16);
+  function checkRef() {
+    var v = refInput.value.trim().toUpperCase();
+    refStatus.textContent = ''; refStatus.className = 'ref-status';
+    if (!v || !REF_RE.test(v)) return;
+    fetch(CFG.apiBase + '/api/internship/referral-codes/' + encodeURIComponent(v))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (refInput.value.trim().toUpperCase() !== v) return;
+        if (d.valid) { refStatus.textContent = '\u2713 Referred by ' + d.name; refStatus.className = 'ref-status ok'; setErr(refInput, false); }
+        else { refStatus.textContent = 'We couldn\u2019t find this referral code.'; refStatus.className = 'ref-status bad'; }
+      })
+      .catch(function () {});
+  }
+  refInput.addEventListener('input', function () { clearTimeout(refTimer); refTimer = setTimeout(checkRef, 450); });
+  if (refInput.value) setTimeout(checkRef, 300);
+
   /* ---------- Validation ---------- */
   var NAME_RE = /^[A-Za-z][A-Za-z .'-]{1,99}$/;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -171,6 +192,7 @@
     courseOther: function () { return course.value !== OTHERS || clean(courseOther.value).length >= 2; },
     year:        function () { return !!year.value; },
     address:     function () { return clean($('address').value).length >= 10; },
+    referralCode: function () { var v = refInput.value.trim(); return !v || REF_RE.test(v.toUpperCase()); },
     batch:       function () { return mode() === 'custom' || (!!batch.value && !batch.selectedOptions[0].disabled); },
     fromDate:    function () { return mode() !== 'custom' || inRange(fromDate.value, fromDate.min, fromDate.max); }
   };
@@ -238,6 +260,7 @@
       internshipFrom: startValue(),
       internshipTo:   toDate.value,
       dateMode:       mode(),
+      referralCode:   refInput.value.trim().toUpperCase(),
       customDatesConsent: mode() === 'custom',
       consent:        true
     };

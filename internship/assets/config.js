@@ -2,8 +2,8 @@
  * CodeBuzz Internship — front-end configuration
  * ------------------------------------------------
  * apiBase: the public URL of the Cloud Run API (no trailing slash).
- *   After deploying the API, replace the value below, e.g.
- *   'https://api.codebuzz.ai' or 'https://internship-api-xxxxx-el.a.run.app'
+ *   deploy.ps1 prints it at the end — paste it below, e.g.
+ *   'https://cb-internship-api-xxxxxxxxxx-el.a.run.app' (or 'https://api.codebuzz.ai' once mapped)
  *
  * When the page is opened from localhost, it talks to the API running
  * locally on port 8080 so you can test without deploying.
@@ -16,6 +16,6 @@
     // Scheduled batch start dates (each runs internshipDays). Keep in sync with internship/index.html
     batches: ['2026-11-02', '2026-11-16', '2026-11-30', '2026-12-14'],
     customLastDay: '2026-12-31', // custom-date internships must end on or before this day
-    paymentsEnabled: false       // switch to true once Razorpay is wired up
+    paymentsEnabled: true        // Razorpay checkout on payment.html (set false to pause online payments)
   };
 })();

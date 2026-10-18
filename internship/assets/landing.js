@@ -135,4 +135,17 @@
       b.querySelector('.batch-cta').textContent = 'Registration closed';
     }
   });
+
+  /* ---------- Refer & earn card: count up + floating coins when visible ---------- */
+  var rc = document.getElementById('referCard');
+  if (rc && 'IntersectionObserver' in window) {
+    var rio = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      rio.disconnect();
+      rc.classList.add('play');
+      var c = document.getElementById('referCount'), e = document.getElementById('referEarned'), k = 0;
+      (function tick() { k++; c.textContent = k; e.textContent = k * 100; if (k < 5) setTimeout(tick, reduce ? 0 : 600); })();
+    }, { threshold: .4 });
+    rio.observe(rc);
+  }
 })();

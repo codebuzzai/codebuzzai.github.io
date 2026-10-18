@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Login · CodeBuzz AI Internship Program</title>
+  <meta name="description" content="Log in to the CodeBuzz AI Internship student portal." />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <a href="./" class="btn btn-ghost btn-sm">Internship program</a>
+    </div>
+  </nav>
+
+  <main class="auth-wrap">
+    <div class="auth-card">
+
+      <!-- Step 1: unique ID -->
+      <section class="view active" id="v-id">
+        <span class="eyebrow">Student portal</span>
+        <h1>Log in</h1>
+        <p class="sub">Use the unique ID you got when you registered (e.g. CBI26-7KQ4MX).</p>
+        <form id="f-id" novalidate>
+          <div class="field">
+            <label for="regId">Unique ID</label>
+            <input class="ctrl" id="regId" type="text" autocomplete="username" placeholder="CBI26-XXXXXX" maxlength="20" style="text-transform:uppercase;font-family:var(--font-m);letter-spacing:.05em" />
+          </div>
+          <button class="btn btn-primary" type="submit">Continue</button>
+        </form>
+        <div class="msg" id="m-id" role="alert"></div>
+        <div class="auth-links">
+          <button class="link-btn" type="button" data-go="v-forgot-id">Forgot unique ID?</button>
+          <a href="register.html">Not registered yet?</a>
+        </div>
+      </section>
+
+      <!-- Step 2a: password -->
+      <section class="view" id="v-login">
+        <span class="eyebrow">Student portal</span>
+        <h1>Welcome back</h1>
+        <p class="sub">Enter your password to continue.</p>
+        <div class="who"><span data-who></span><button class="link-btn" type="button" data-go="v-id">Change</button></div>
+        <form id="f-login" novalidate>
+          <input type="text" autocomplete="username" data-who-input hidden />
+          <div class="field">
+            <label for="pw">Password</label>
+            <div class="pw-wrap"><input class="ctrl" id="pw" type="password" autocomplete="current-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+          </div>
+          <button class="btn btn-primary" type="submit">Log in</button>
+        </form>
+        <div class="msg" id="m-login" role="alert"></div>
+        <div class="auth-links">
+          <button class="link-btn" type="button" data-go="v-forgot-pw">Forgot password?</button>
+        </div>
+      </section>
+
+      <!-- Step 2b: first login → set password -->
+      <section class="view" id="v-setup">
+        <span class="eyebrow">First time here</span>
+        <h1>Set your password</h1>
+        <p class="sub">Confirm your registered email and mobile number, then choose a password.</p>
+        <div class="who"><span data-who></span><button class="link-btn" type="button" data-go="v-id">Change</button></div>
+        <form id="f-setup" novalidate>
+          <input type="text" autocomplete="username" data-who-input hidden />
+          <div class="field">
+            <label for="s-email">Registered email</label>
+            <input class="ctrl" id="s-email" type="email" autocomplete="email" maxlength="150" />
+          </div>
+          <div class="field">
+            <label for="s-phone">Registered mobile number</label>
+            <div class="phone-wrap"><span class="prefix">+91</span><input class="ctrl" id="s-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="16" /></div>
+          </div>
+          <div class="field">
+            <label for="s-pw">Password</label>
+            <div class="pw-wrap"><input class="ctrl" id="s-pw" type="password" autocomplete="new-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+            <span class="hint muted" style="font-size:.78rem">At least 8 characters, with a letter and a number.</span>
+          </div>
+          <div class="field">
+            <label for="s-pw2">Confirm password</label>
+            <div class="pw-wrap"><input class="ctrl" id="s-pw2" type="password" autocomplete="new-password" maxlength="72" /><button class="pw-toggle" type="button">Show</button></div>
+          </div>
+          <button class="btn btn-primary" type="submit">Set password &amp; log in</button>
+        </form>
+        <div class="msg" id="m-setup" role="alert"></div>
+      </section>
+
+      <!-- Forgot unique ID -->
+      <section class="view" id="v-forgot-id">
+        <span class="eyebrow">Forgot unique ID</span>
+        <h1>Find your ID</h1>
+        <p class="sub">Enter the email and mobile number you registered with.</p>
+        <form id="f-fid" novalidate>
+          <div class="field">
+            <label for="f-email">Registered email</label>
+            <input class="ctrl" id="f-email" type="email" autocomplete="email" maxlength="150" />
+          </div>
+          <div class="field">
+            <label for="f-phone">Registered mobile number</label>
+            <div class="phone-wrap"><span class="prefix">+91</span><input class="ctrl" id="f-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="16" /></div>
+          </div>
+          <button class="btn btn-primary" type="submit">Show my unique ID</button>
+        </form>
+        <div class="msg" id="m-fid" role="alert"></div>
+        <div class="id-reveal" id="fid-result" hidden>
+          <span class="muted" id="fid-name"></span>
+          <strong id="fid-id"></strong>
+          <button class="btn btn-primary btn-sm" type="button" id="fid-use" style="margin-top:14px;width:auto">Log in with this ID</button>
+        </div>
+        <div class="auth-links"><button class="link-btn" type="button" data-go="v-id">&larr; Back to login</button></div>
+      </section>
+
+      <!-- Forgot password -->
+      <section class="view" id="v-forgot-pw">
+        <span class="eyebrow">Forgot password</span>
+        <h1>Reset your password</h1>
+        <p class="sub">We'll email a reset link to your registered email address.</p>
+        <form id="f-fpw" novalidate>
+          <div class="field">
+            <label for="fp-ident">Unique ID or registered email</label>
+            <input class="ctrl" id="fp-ident" type="text" autocomplete="username" maxlength="150" />
+          </div>
+          <button class="btn btn-primary" type="submit">Email me a reset link</button>
+        </form>
+        <div class="msg" id="m-fpw" role="alert"></div>
+        <div class="auth-links"><button class="link-btn" type="button" data-go="v-id">&larr; Back to login</button></div>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/portal.js"></script>
+  <script>
+  (function () {
+    var P = window.Portal, $ = function (x) { return document.getElementById(x); };
+    var ID_RE = /^CBI\d{2}-[A-Z0-9]{6}$/;
+    var currentId = '';
+
+    // Already logged in? Go straight to the dashboard.
+    if (P.token('student')) { location.replace('dashboard.html'); return; }
+
+    function go(view) {
+      document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('active', v.id === view); });
+      document.querySelectorAll('.msg').forEach(function (m) { P.msg(m, ''); });
+      var first = $(view).querySelector('input:not([hidden])'); if (first) setTimeout(function () { first.focus(); }, 50);
+    }
+    document.querySelectorAll('[data-go]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.go === 'v-forgot-pw' && currentId) $('fp-ident').value = currentId;
+        go(b.dataset.go);
+      });
+    });
+    P.wirePasswordToggles();
+    function normId(v) { return String(v || '').trim().toUpperCase().replace(/\s+/g, ''); }
+    function phone(v) { var d = String(v || '').replace(/\D/g, ''); if (d.length > 10) d = d.replace(/^(91|0)/, ''); return d; }
+    function setWho(id) {
+      currentId = id;
+      document.querySelectorAll('[data-who]').forEach(function (e) { e.textContent = id; });
+      document.querySelectorAll('[data-who-input]').forEach(function (e) { e.value = id; });
+    }
+    function loggedIn(token) { P.store('student', token); location.replace('dashboard.html'); }
+
+    if (/expired=1/.test(location.search)) P.msg($('m-id'), 'Your session ended. Please log in again.', 'ok');
+    var pre = new URLSearchParams(location.search).get('id');
+    if (pre) $('regId').value = normId(pre);
+
+    // Step 1 → which step 2?
+    $('f-id').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var id = normId($('regId').value), btn = this.querySelector('button');
+      if (!ID_RE.test(id)) return P.msg($('m-id'), 'Enter your unique ID, like CBI26-7KQ4MX.');
+      P.busy(btn, true);
+      P.api('/auth/status', { body: { registrationId: id } }).then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-id'), r.data.message || 'Something went wrong. Please try again.');
+        setWho(id);
+        go(r.data.passwordSet ? 'v-login' : 'v-setup');
+      });
+    });
+
+    $('f-login').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      if (!$('pw').value) return P.msg($('m-login'), 'Enter your password.');
+      P.busy(btn, true, 'Logging in…');
+      P.api('/auth/login', { body: { registrationId: currentId, password: $('pw').value } }).then(function (r) {
+        P.busy(btn, false);
+        if (r.ok) return loggedIn(r.data.token);
+        if (r.status === 409 && r.data.needsSetup) return go('v-setup');
+        P.msg($('m-login'), r.data.message || 'Could not log in.');
+      });
+    });
+
+    $('f-setup').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      var body = { registrationId: currentId, email: $('s-email').value.trim(), phone: phone($('s-phone').value), password: $('s-pw').value, confirmPassword: $('s-pw2').value };
+      if (!body.email || body.phone.length !== 10) return P.msg($('m-setup'), 'Enter your registered email and 10-digit mobile number.');
+      if (!P.PW_RULE.test(body.password)) return P.msg($('m-setup'), 'Password must be 8–72 characters with at least one letter and one number.');
+      if (body.password !== body.confirmPassword) return P.msg($('m-setup'), 'Passwords don’t match.');
+      P.busy(btn, true, 'Saving…');
+      P.api('/auth/setup', { body: body }).then(function (r) {
+        P.busy(btn, false);
+        if (r.ok) return loggedIn(r.data.token);
+        if (r.status === 409) { go('v-login'); return P.msg($('m-login'), r.data.message); }
+        P.msg($('m-setup'), r.data.message || 'Could not set the password.');
+      });
+    });
+
+    $('f-fid').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      var body = { email: $('f-email').value.trim(), phone: phone($('f-phone').value) };
+      $('fid-result').hidden = true;
+      if (!body.email || body.phone.length !== 10) return P.msg($('m-fid'), 'Enter your registered email and 10-digit mobile number.');
+      P.busy(btn, true, 'Looking up…');
+      P.api('/auth/forgot-id', { body: body }).then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-fid'), r.data.message || 'No registration found.');
+        P.msg($('m-fid'), '');
+        $('fid-name').textContent = 'Hi ' + r.data.name + ', your unique ID is';
+        $('fid-id').textContent = r.data.registrationId;
+        $('fid-result').hidden = false;
+      });
+    });
+    $('fid-use').addEventListener('click', function () { $('regId').value = $('fid-id').textContent; go('v-id'); });
+
+    $('f-fpw').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = this.querySelector('button[type=submit]');
+      var ident = $('fp-ident').value.trim();
+      if (!ident) return P.msg($('m-fpw'), 'Enter your unique ID or registered email.');
+      P.busy(btn, true, 'Sending…');
+      P.api('/auth/forgot-password', { body: { identifier: ident } }).then(function (r) {
+        P.busy(btn, false);
+        P.msg($('m-fpw'), r.data.message || 'Something went wrong.', r.ok ? 'ok' : 'err');
+      });
+    });
+
+    ['s-phone', 'f-phone'].forEach(function (id) {
+      $(id).addEventListener('input', function () { this.value = phone(this.value).slice(0, 10); });
+    });
+  })();
+  </script>
+</body>
+</html>
