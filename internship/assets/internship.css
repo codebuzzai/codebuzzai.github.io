@@ -771,3 +771,28 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; }
 @media (max-width: 1000px) { .hl-refer .hr-flow { margin-top: 0; } .hl-refer { padding-top: 56px; } }
 .hr-flow i { white-space: nowrap; }
 @media (max-width: 680px) { .hr-flow { gap: 4px; flex-wrap: wrap; } .hr-av { width: 32px; height: 32px; font-size: .8rem; } .hr-flow i { font-size: .66rem; padding: 2px 6px; } }
+
+/* ================= ADMIN: edit / delete ================= */
+.btn-danger { background: rgba(255,107,107,.12); color: #FFB4B4; border-color: rgba(255,107,107,.45); }
+.btn-danger:hover { background: rgba(255,107,107,.22); transform: translateY(-2px); }
+.btn-danger-solid { background: #E5484D; color: #fff; border-color: #E5484D; }
+.btn-danger-solid:hover { background: #F2555A; transform: translateY(-2px); }
+.btn-danger-solid[disabled] { background: rgba(229,72,77,.35); border-color: transparent; }
+.drawer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 6px; }
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.edit-grid .full { grid-column: 1 / -1; }
+.edit-grid .field label { font-size: .8rem; color: var(--muted); }
+.edit-grid .ctrl { padding: 10px 12px; font-size: .92rem; }
+.edit-grid textarea.ctrl { min-height: 76px; }
+@media (max-width: 560px) { .edit-grid { grid-template-columns: 1fr; } }
+.confirm-card { max-width: 480px !important; }
+.confirm-card h1 { font-size: 1.35rem !important; }
+.change-list { margin: 6px 0 4px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: .86rem; }
+.change-list div { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 10px 12px; }
+.change-list div + div { border-top: 1px solid var(--border); }
+.change-list span { color: var(--muted); }
+.change-list del { color: #FFB4B4; text-decoration: line-through; opacity: .8; }
+.change-list ins { color: var(--green); text-decoration: none; display: block; }
+.warn-list { margin: 8px 0 14px 18px; color: var(--muted); font-size: .9rem; display: grid; gap: 6px; }
+.warn-list li { list-style: disc; }
+.warn-list b { color: var(--text); }

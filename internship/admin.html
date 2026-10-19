@@ -143,6 +143,21 @@
     </div>
   </div>
 
+  <!-- Confirmation popup (edit / delete / reset login) -->
+  <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="cf-title">
+    <div class="auth-card confirm-card">
+      <h1 id="cf-title">Are you sure?</h1>
+      <div id="cf-body" class="sub"></div>
+      <div class="field" id="cf-typewrap" hidden>
+        <label for="cf-type" id="cf-typelabel">Type the ID to confirm</label>
+        <input class="ctrl" id="cf-type" type="text" autocomplete="off" spellcheck="false" style="font-family:var(--font-m);text-transform:uppercase" />
+      </div>
+      <button class="btn btn-primary" type="button" id="cf-ok">Confirm</button>
+      <button class="btn btn-ghost" type="button" id="cf-cancel" style="margin-top:10px">Cancel</button>
+      <div class="msg" id="m-cf" role="alert"></div>
+    </div>
+  </div>
+
   <script src="assets/config.js"></script>
   <script src="assets/common.js"></script>
   <script src="assets/portal.js"></script>
@@ -330,11 +345,144 @@
       });
     });
 
+    // ---------- Confirmation popup ----------
+    // confirmBox({ title, html, okText, danger, typeToConfirm, onConfirm }) — onConfirm returns a Promise of
+    // { ok, message }; the popup stays open (showing the error) if it fails.
+    function confirmBox(o) {
+      var modal = $('confirmModal'), ok = $('cf-ok'), input = $('cf-type');
+      $('cf-title').textContent = o.title;
+      $('cf-body').innerHTML = o.html;
+      ok.textContent = o.okText || 'Confirm';
+      ok.className = 'btn ' + (o.danger ? 'btn-danger-solid' : 'btn-primary');
+      P.msg($('m-cf'), '');
+      $('cf-typewrap').hidden = !o.typeToConfirm;
+      input.value = '';
+      if (o.typeToConfirm) $('cf-typelabel').textContent = 'Type ' + o.typeToConfirm + ' to confirm';
+      ok.disabled = !!o.typeToConfirm;
+      input.oninput = function () { ok.disabled = input.value.trim().toUpperCase() !== o.typeToConfirm; };
+      ok.onclick = function () {
+        P.busy(ok, true, 'Working\u2026');
+        o.onConfirm().then(function (r) {
+          P.busy(ok, false);
+          if (r && r.ok) { modal.classList.remove('open'); if (o.after) o.after(r); }
+          else { P.msg($('m-cf'), (r && r.message) || 'Something went wrong.'); if (o.typeToConfirm) ok.disabled = input.value.trim().toUpperCase() !== o.typeToConfirm; }
+        });
+      };
+      modal.classList.add('open');
+      setTimeout(function () { (o.typeToConfirm ? input : $('cf-cancel')).focus(); }, 50);
+    }
+    $('cf-cancel').addEventListener('click', function () { $('confirmModal').classList.remove('open'); });
+
+    // ---------- Edit student ----------
+    var BATCHES = (P.CFG.batches || []);
+    var EDIT_FIELDS = [
+      ['fullName', 'Name'], ['fatherName', 'Father\u2019s name'], ['dateOfBirth', 'Date of birth'], ['email', 'Email'],
+      ['phone', 'Mobile'], ['college', 'College'], ['degree', 'Degree'], ['course', 'Course / branch'],
+      ['collegeYear', 'College year'], ['homeAddress', 'Address'], ['dateMode', 'Internship type'], ['internshipFrom', 'Internship start']
+    ];
+    function editValues(s) {
+      return { fullName: s.fullName, fatherName: s.fatherName, dateOfBirth: s.dateOfBirth, email: s.email, phone: s.phone,
+        college: s.college, degree: s.degree, course: s.course, collegeYear: String(s.collegeYear), homeAddress: s.homeAddress,
+        dateMode: s.dateMode, internshipFrom: s.from };
+    }
+    function showValue(k, v) {
+      if (k === 'dateMode') return v === 'custom' ? 'Custom dates' : 'Scheduled batch';
+      if (k === 'dateOfBirth' || k === 'internshipFrom') return P.date(v);
+      if (k === 'collegeYear') return v + ' year';
+      return v;
+    }
+    function renderEdit(s) {
+      var v = editValues(s);
+      var batchOpts = BATCHES.map(function (b, i) { return '<option value="' + b + '"' + (b === v.internshipFrom ? ' selected' : '') + '>Batch ' + String(i + 1).padStart(2, '0') + ' \u00b7 ' + P.date(b) + '</option>'; }).join('');
+      $('drawerBody').innerHTML =
+        '<span class="eyebrow">' + e(s.registrationId) + '</span><h2>Edit details</h2>' +
+        '<p class="muted" style="margin-bottom:18px">Payment and referral details can\u2019t be edited here.</p>' +
+        '<form id="f-edit" novalidate><div class="edit-grid">' +
+        fld('fullName', 'Name', '<input class="ctrl" id="ed-fullName" maxlength="100" value="' + e(v.fullName) + '">') +
+        fld('fatherName', 'Father\u2019s name', '<input class="ctrl" id="ed-fatherName" maxlength="100" value="' + e(v.fatherName) + '">') +
+        fld('dateOfBirth', 'Date of birth', '<input class="ctrl" id="ed-dateOfBirth" type="date" value="' + e(v.dateOfBirth) + '">') +
+        fld('phone', 'Mobile', '<input class="ctrl" id="ed-phone" inputmode="numeric" maxlength="16" value="' + e(v.phone) + '">') +
+        fld('email', 'Email', '<input class="ctrl" id="ed-email" type="email" maxlength="150" value="' + e(v.email) + '">', true) +
+        fld('college', 'College', '<input class="ctrl" id="ed-college" maxlength="200" value="' + e(v.college) + '">', true) +
+        fld('degree', 'Degree', '<input class="ctrl" id="ed-degree" maxlength="80" value="' + e(v.degree) + '">') +
+        fld('course', 'Course / branch', '<input class="ctrl" id="ed-course" maxlength="120" value="' + e(v.course) + '">') +
+        fld('collegeYear', 'College year', '<select class="ctrl" id="ed-collegeYear">' + [1, 2, 3, 4, 5].map(function (y) { return '<option value="' + y + '"' + (String(y) === v.collegeYear ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>') +
+        fld('dateMode', 'Internship type', '<select class="ctrl" id="ed-dateMode"><option value="scheduled"' + (v.dateMode !== 'custom' ? ' selected' : '') + '>Scheduled batch</option><option value="custom"' + (v.dateMode === 'custom' ? ' selected' : '') + '>Custom dates</option></select>') +
+        '<div class="field full" id="wrap-batch">' + '<label for="ed-batch">Batch</label><select class="ctrl" id="ed-batch">' + (BATCHES.indexOf(v.internshipFrom) < 0 ? '<option value="">Select a batch</option>' : '') + batchOpts + '</select></div>' +
+        '<div class="field full" id="wrap-custom"><label for="ed-custom">Start date (ends 2 weeks later)</label><input class="ctrl" id="ed-custom" type="date" value="' + e(v.internshipFrom) + '"></div>' +
+        fld('homeAddress', 'Address', '<textarea class="ctrl" id="ed-homeAddress" maxlength="500">' + e(v.homeAddress) + '</textarea>', true) +
+        '</div><div class="drawer-actions"><button class="btn btn-primary btn-sm" type="submit">Review changes</button><button class="btn btn-ghost btn-sm" type="button" id="ed-cancel">Cancel</button></div></form>' +
+        '<div class="msg" id="m-edit" role="alert"></div>';
+      function syncMode() { var c = $('ed-dateMode').value === 'custom'; $('wrap-batch').hidden = c; $('wrap-custom').hidden = !c; }
+      $('ed-dateMode').addEventListener('change', syncMode); syncMode();
+      $('ed-cancel').addEventListener('click', function () { openStudent(s.registrationId); });
+      $('f-edit').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var nv = {};
+        EDIT_FIELDS.forEach(function (f) { var el = $('ed-' + f[0]); if (el) nv[f[0]] = el.value.trim(); });
+        nv.internshipFrom = nv.dateMode === 'custom' ? $('ed-custom').value : $('ed-batch').value;
+        if (!nv.internshipFrom) return P.msg($('m-edit'), nv.dateMode === 'custom' ? 'Choose a start date.' : 'Choose a batch.');
+        var changes = EDIT_FIELDS.filter(function (f) { return String(nv[f[0]]) !== String(v[f[0]]); });
+        if (!changes.length) return P.msg($('m-edit'), 'Nothing has changed.', 'ok');
+        confirmBox({
+          title: 'Save changes for ' + s.fullName + '?',
+          html: '<p style="margin-bottom:10px">These details will be updated:</p><div class="change-list">' +
+            changes.map(function (f) {
+              return '<div><span>' + e(f[1]) + '</span><p><del>' + e(showValue(f[0], v[f[0]])) + '</del><ins>' + e(showValue(f[0], nv[f[0]])) + '</ins></p></div>';
+            }).join('') + '</div>' +
+            (changes.some(function (f) { return f[0] === 'email' || f[0] === 'phone'; }) ? '<p class="muted" style="font-size:.82rem;margin-top:10px">The student uses their email and mobile to recover their ID and password.</p>' : ''),
+          okText: 'Yes, save changes',
+          onConfirm: function () {
+            var body = Object.assign({}, nv, { collegeYear: +nv.collegeYear });
+            return P.api('/admin/students/' + encodeURIComponent(s.registrationId) + '/update', { body: body, auth: 'admin' }).then(function (r) {
+              if (r.ok) return { ok: true };
+              var bad = r.data.errors ? Object.keys(r.data.errors).map(function (k) { return (EDIT_FIELDS.filter(function (f) { return f[0] === k; })[0] || [k, k])[1]; }) : [];
+              return { ok: false, message: (r.data.message || 'Could not save.') + (bad.length ? ' (' + bad.join(', ') + ')' : '') };
+            });
+          },
+          after: function () { openStudent(s.registrationId); loadAll(); P.msg($('m'), 'Saved changes for ' + nv.fullName + '.', 'ok'); }
+        });
+      });
+    }
+    function fld(id, label, control, full) {
+      return '<div class="field' + (full ? ' full' : '') + '"><label for="ed-' + id + '">' + e(label) + '</label>' + control + '</div>';
+    }
+
+    // ---------- Delete student ----------
+    function askDelete(d) {
+      var s = d.student;
+      var paid = s.paymentDone === 'Yes';
+      var items = [];
+      items.push('<li>The student\u2019s registration and all personal details</li>');
+      if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '. Razorpay keeps its own record; refunds are done in the Razorpay dashboard.' : '') + '</li>');
+      if (d.referrals.length) items.push('<li><b>' + d.referrals.length + ' referral cashback record(s)</b> where they referred someone' + (s.cashbackDueInr ? ' (' + P.inr(s.cashbackDueInr) + ' still due to them)' : '') + '</li>');
+      if (s.referredBy) items.push('<li>The cashback ' + e(s.referredBy.name) + ' gets for referring them</li>');
+      if (s.referralCode) items.push('<li>Their referral code <b>' + e(s.referralCode) + '</b> stops working; friends who used it stay registered</li>');
+      if (s.loginActivated === 'Yes') items.push('<li>Their student login</li>');
+      confirmBox({
+        title: 'Delete ' + s.fullName + '?',
+        html: '<p>This permanently removes:</p><ul class="warn-list">' + items.join('') + '</ul><p style="color:#FFB4B4;font-weight:600">This can\u2019t be undone.</p>',
+        okText: 'Delete permanently',
+        danger: true,
+        typeToConfirm: s.registrationId,
+        onConfirm: function () {
+          return P.api('/admin/students/' + encodeURIComponent(s.registrationId) + '/delete', { body: { confirm: s.registrationId }, auth: 'admin' }).then(function (r) {
+            return r.ok ? { ok: true } : { ok: false, message: r.data.message || 'Could not delete.' };
+          });
+        },
+        after: function () { closeDrawer(); loadAll(); P.msg($('m'), s.fullName + ' (' + s.registrationId + ') was deleted.', 'ok'); }
+      });
+    }
+
     // ---------- Student drawer ----------
     function closeDrawer() { $('drawer').classList.remove('open'); $('drawerBg').classList.remove('open'); }
     $('drawerClose').addEventListener('click', closeDrawer);
     $('drawerBg').addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeDrawer(); $('payModal').classList.remove('open'); } });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') return;
+      if ($('confirmModal').classList.contains('open')) { $('confirmModal').classList.remove('open'); return; }
+      closeDrawer(); $('payModal').classList.remove('open');
+    });
 
     function kv(rows) {
       return '<dl class="kv">' + rows.filter(Boolean).map(function (r) { return '<dt>' + e(r[0]) + '</dt><dd>' + (r[2] ? r[1] : e(r[1])) + '</dd>'; }).join('') + '</dl>';
@@ -344,9 +492,11 @@
       $('drawer').classList.add('open'); $('drawerBg').classList.add('open');
       P.api('/admin/students/' + encodeURIComponent(id), { auth: 'admin' }).then(function (r) {
         if (!r.ok) { $('drawerBody').innerHTML = '<p class="muted">' + e(r.data.message || 'Could not load.') + '</p>'; return; }
-        var s = r.data.student;
+        var s = r.data.student, detail = r.data;
         var html = '<span class="eyebrow">' + e(s.registrationId) + '</span><h2>' + e(s.fullName) + '</h2>' +
           '<p class="muted">' + e(s.college) + '</p>' +
+          '<div class="drawer-actions"><button class="btn btn-ghost btn-sm" type="button" id="btnEdit">Edit details</button>' +
+          '<button class="btn btn-danger btn-sm" type="button" id="btnDelete">Delete student</button></div>' +
           '<h3>Internship</h3>' + kv([
             ['Type', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)], ['Dates', P.date(s.from) + ' → ' + P.date(s.to)]
           ]) +
@@ -380,11 +530,20 @@
           ]) +
           (s.loginActivated === 'Yes' ? '<button class="btn btn-ghost btn-sm" id="resetLogin" type="button" style="margin-top:14px">Reset login (student sets a new password)</button>' : '');
         $('drawerBody').innerHTML = html;
+        $('btnEdit').addEventListener('click', function () { renderEdit(s); });
+        $('btnDelete').addEventListener('click', function () { askDelete(detail); });
         var rl = $('resetLogin');
         if (rl) rl.addEventListener('click', function () {
-          if (!window.confirm('Reset login for ' + s.fullName + '? They will set a new password after confirming their email and mobile.')) return;
-          P.api('/admin/students/' + encodeURIComponent(s.registrationId) + '/reset-login', { body: {}, auth: 'admin' }).then(function (x) {
-            if (x.ok) { openStudent(s.registrationId); loadAll(); } else P.msg($('m'), x.data.message);
+          confirmBox({
+            title: 'Reset login for ' + s.fullName + '?',
+            html: '<p>Their current password stops working. Next time they log in, they confirm their registered email and mobile and choose a new password.</p>',
+            okText: 'Reset login',
+            onConfirm: function () {
+              return P.api('/admin/students/' + encodeURIComponent(s.registrationId) + '/reset-login', { body: {}, auth: 'admin' }).then(function (x) {
+                return x.ok ? { ok: true } : { ok: false, message: x.data.message };
+              });
+            },
+            after: function () { openStudent(s.registrationId); loadAll(); }
           });
         });
       });
