@@ -147,15 +147,17 @@
       $('refBox').hidden = false;
     }
 
-    function showPaid() {
-      $('sPay').textContent = 'Paid'; $('sPay').className = ''; $('sPay').style.color = 'var(--green)';
+    function showPaid(mode) {
+      var demo = mode === 'test';   // paid with Razorpay test (demo) keys: no real money
+      $('sPay').textContent = demo ? 'Demo paid' : 'Paid'; $('sPay').className = ''; $('sPay').style.color = demo ? '#C9B6FF' : 'var(--green)';
       setBusy(false, 'Payment complete'); btn.disabled = true;
       document.querySelectorAll('.stepper .st')[1].className = 'st done';
       document.querySelectorAll('.stepper .st b')[1].textContent = '✓';
       $('payCard').querySelector('h1').textContent = 'Your seat is confirmed!';
       $('payCard').querySelector('h1 + p').textContent = 'Welcome to the CodeBuzz AI Internship Program.';
       var arrow = btn.querySelector('svg'); if (arrow) arrow.style.display = 'none';
-      say('Payment received. Log in to the student portal with your unique ID to see your details anytime.');
+      say(demo ? 'Demo payment received (Razorpay test mode \u2014 no real money was charged). Log in to the student portal with your unique ID to see your details.'
+               : 'Payment received. Log in to the student portal with your unique ID to see your details anytime.');
       $('loginLink').hidden = false;
     }
 
@@ -166,7 +168,12 @@
           $('sName').textContent = d.name;
           $('sPeriod').textContent = fmt(d.internshipFrom) + ' → ' + fmt(d.internshipTo);
           if (d.feeInr) { feeInr = d.feeInr; $('sAmount').textContent = rupees(feeInr); }
-          if (d.paymentDone === 'Yes') { showPaid(); showReferral(d.referralCode, d.referralRewardInr); } else setBusy(false);
+          var demoNeedsReal = d.paymentDone === 'Yes' && d.paymentMode === 'test' && d.paymentsLive;
+          if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode); showReferral(d.referralCode, d.referralRewardInr); }
+          else {
+            setBusy(false);
+            if (demoNeedsReal) { $('sPay').textContent = 'Demo paid \u2014 real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
+          }
           return d;
         });
     }
@@ -212,7 +219,7 @@
       Promise.all([post('/api/internship/payments/order', { registrationId: id }), loadCheckout()])
         .then(function (res) {
           var r = res[0];
-          if (r.status === 409) { showPaid(); return; }
+          if (r.status === 409) { showPaid(r.data.paymentMode); return; }
           if (!r.ok) throw new Error(r.data.message || 'order_failed');
           var o = r.data;
           var rzp = new window.Razorpay({
@@ -233,7 +240,7 @@
                 razorpay_payment_id: resp.razorpay_payment_id,
                 razorpay_signature: resp.razorpay_signature
               }).then(function (v) {
-                if (v.ok && v.data.paymentDone === 'Yes') { showPaid(); load().catch(function () {}); if (window.gtag) gtag('event', 'internship_paid'); }
+                if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); }
                 else waitForConfirmation(5);
               }).catch(function () { waitForConfirmation(5); });
             },

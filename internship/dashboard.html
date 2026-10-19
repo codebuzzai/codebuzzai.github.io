@@ -135,8 +135,11 @@
       // Summary
       var st = STATE[i.state] || STATE.unknown;
       $('st-intern').textContent = st[0];
-      $('st-pay').textContent = p.paymentDone === 'Yes' ? 'Paid' : 'Pending';
-      $('st-pay').style.color = p.paymentDone === 'Yes' ? 'var(--green)' : '#FEBC2E';
+      // 'test' = paid with Razorpay test (demo) keys: no real money
+      var demo = p.paymentDone === 'Yes' && p.paymentMode === 'test';
+      var payText = p.paymentDone !== 'Yes' ? 'Pending' : (demo ? 'Demo paid' : 'Paid');
+      $('st-pay').textContent = payText;
+      $('st-pay').style.color = p.paymentDone !== 'Yes' ? '#FEBC2E' : (demo ? '#C9B6FF' : 'var(--green)');
       $('st-friends').textContent = ref.totals.joined;
       $('st-cash').textContent = P.inr(ref.totals.earnedInr);
 
@@ -170,16 +173,19 @@
       ]);
 
       // Payment
-      tag($('pay-tag'), p.paymentDone === 'Yes' ? 'Paid' : 'Pending', p.paymentDone === 'Yes' ? 'green' : 'amber');
+      tag($('pay-tag'), payText, p.paymentDone !== 'Yes' ? 'amber' : (demo ? 'violet' : 'green'));
       kv($('pay'), [
         ['Fee', P.inr(p.feeInr)],
-        ['Status', p.paymentDone === 'Yes' ? 'Paid' : 'Not paid yet'],
+        ['Status', p.paymentDone !== 'Yes' ? 'Not paid yet' : (demo ? 'Demo paid (Razorpay test mode)' : 'Paid')],
         p.paymentDone === 'Yes' ? ['Amount paid', P.inr(p.amountPaidInr)] : null,
         p.paymentId ? ['Payment ID', '<span class="mono">' + e(p.paymentId) + '</span>', true] : null,
         p.paidAt ? ['Paid on', P.date(p.paidAt)] : null,
         ['Attempts', String(p.attempts.length)]
       ]);
-      if (p.paymentDone !== 'Yes') {
+      if (demo) {
+        $('pay-action').innerHTML = '<div class="demo-note">This was a <b>demo payment</b> made in Razorpay test mode \u2014 no real money was charged.' +
+          (p.paymentsLive ? '</div><a class="btn btn-primary" style="margin-top:14px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Complete real payment \u00b7 ' + P.inr(p.feeInr) + '</a>' : ' Your seat is confirmed once a real payment is made.</div>');
+      } else if (p.paymentDone !== 'Yes') {
         $('pay-action').innerHTML = '<a class="btn btn-primary" style="margin-top:18px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Pay ' + P.inr(p.feeInr) + '</a>';
       }
 
@@ -196,9 +202,9 @@
       } else {
         $('ref-table').innerHTML = '<table class="tbl"><thead><tr><th>Friend</th><th>Registered</th><th>Their payment</th><th>Cashback</th><th class="num">Amount</th><th>Paid to you</th></tr></thead><tbody>' +
           ref.referrals.map(function (x) {
-            var rs = REWARD[x.rewardStatus] || [x.rewardStatus, ''];
+            var rs = x.demo && x.rewardStatus !== 'cancelled' ? ['Demo \u2014 no cashback', 'violet'] : (REWARD[x.rewardStatus] || [x.rewardStatus, '']);
             return '<tr><td>' + e(x.name) + '</td><td>' + P.date(x.registeredOn) + '</td>' +
-              '<td>' + (x.paymentDone === 'Yes' ? '<span class="tag green">Paid</span>' : '<span class="tag amber">Pending</span>') + '</td>' +
+              '<td>' + (x.paymentDone !== 'Yes' ? '<span class="tag amber">Pending</span>' : (x.demo ? '<span class="tag violet">Demo paid</span>' : '<span class="tag green">Paid</span>')) + '</td>' +
               '<td><span class="tag ' + rs[1] + '">' + rs[0] + '</span></td><td class="num">' + P.inr(x.amountInr) + '</td>' +
               '<td>' + (x.paidOn ? P.date(x.paidOn) + '<br><span class="muted mono">' + e(x.payoutReference) + '</span>' : '<span class="muted">—</span>') + '</td></tr>';
           }).join('') + '</tbody></table>';

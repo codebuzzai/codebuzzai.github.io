@@ -772,6 +772,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .88rem; }
 .hr-flow i { white-space: nowrap; }
 @media (max-width: 680px) { .hr-flow { gap: 4px; flex-wrap: wrap; } .hr-av { width: 32px; height: 32px; font-size: .8rem; } .hr-flow i { font-size: .66rem; padding: 2px 6px; } }
 
+/* ================= Demo (Razorpay test-mode) payments ================= */
+.tag.violet { color: #C9B6FF; border-color: rgba(139,92,246,.45); background: rgba(139,92,246,.12); }
+.demo-note { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: .86rem; color: #D7CCFF;
+  background: rgba(139,92,246,.10); border: 1px solid rgba(139,92,246,.35); }
+.test-banner { margin-bottom: 18px; padding: 12px 16px; border-radius: 12px; font-size: .9rem; color: #D7CCFF;
+  background: rgba(139,92,246,.10); border: 1px solid rgba(139,92,246,.35); }
+
 /* ================= ADMIN: edit / delete ================= */
 .btn-danger { background: rgba(255,107,107,.12); color: #FFB4B4; border-color: rgba(255,107,107,.45); }
 .btn-danger:hover { background: rgba(255,107,107,.22); transform: translateY(-2px); }

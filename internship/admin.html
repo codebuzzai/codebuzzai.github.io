@@ -56,13 +56,14 @@
         <button data-tab="students" type="button">Students</button>
         <button data-tab="cashback" type="button">Referral cashback</button>
       </div>
+      <div class="test-banner" id="testBanner" hidden>Razorpay is in <b>test mode</b>: payments are demo payments (no real money). They're shown as <b>Demo paid</b> and aren't counted in revenue or cashback.</div>
       <div class="msg" id="m" role="alert"></div>
 
       <!-- Overview -->
       <section id="tab-overview">
         <div class="stat-row" style="margin-bottom:20px">
           <div class="stat"><strong id="o-reg">0</strong><span>Registered</span></div>
-          <div class="stat"><strong id="o-paid">0</strong><span>Paid</span></div>
+          <div class="stat"><strong id="o-paid">0</strong><span id="o-paid-label">Paid (real)</span></div>
           <div class="stat"><strong id="o-rev">&#8377;0</strong><span>Fees collected</span></div>
           <div class="stat"><strong id="o-due">&#8377;0</strong><span>Cashback to pay</span></div>
         </div>
@@ -77,7 +78,7 @@
               <div class="stat"><strong id="o-r-pending">0</strong><span>Pending (friend not paid)</span></div>
               <div class="stat"><strong id="o-r-earned">0</strong><span>Earned (to pay)</span></div>
               <div class="stat"><strong id="o-r-paid">0</strong><span>Paid out</span></div>
-              <div class="stat"><strong id="o-r-cancel">0</strong><span>Cancelled</span></div>
+              <div class="stat"><strong id="o-r-cancel">0</strong><span>Demo (no cashback) &middot; cancelled</span></div>
             </div>
           </div>
         </div>
@@ -88,7 +89,7 @@
         <div class="toolbar">
           <input class="ctrl grow" id="q" type="search" placeholder="Search name, ID, email, phone, college, referral code" />
           <select class="ctrl" id="f-batch"><option value="">All batches</option></select>
-          <select class="ctrl" id="f-pay"><option value="">Any payment</option><option value="Yes">Paid</option><option value="No">Not paid</option></select>
+          <select class="ctrl" id="f-pay"><option value="">Any payment</option><option value="Yes">Paid (real)</option><option value="Demo">Demo paid</option><option value="No">Not paid</option></select>
           <select class="ctrl" id="f-ref"><option value="">Any referral</option><option value="referred">Was referred</option><option value="referrer">Has referred others</option></select>
           <button class="btn btn-ghost btn-sm" id="csv-students" type="button">Export CSV</button>
         </div>
@@ -212,6 +213,15 @@
     }
     function start() { show('app'); loadAll(); }
 
+    // Payment status: 'test' mode = paid with Razorpay test (demo) keys, no real money
+    function payState(s) { return s.paymentDone !== 'Yes' ? 'none' : (s.paymentMode === 'test' ? 'demo' : 'real'); }
+    function payTag(s, withAmount) {
+      var st = payState(s);
+      if (st === 'real') return '<span class="tag green">Paid' + (withAmount ? ' ' + P.inr(s.amountPaidInr) : '') + '</span>';
+      if (st === 'demo') return '<span class="tag violet">Demo paid</span>';
+      return '<span class="tag amber">Not paid</span>';
+    }
+
     function groupKey(s) { return (s.dateMode === 'custom' ? 'custom:' : 'batch:') + s.from; }
     function groupLabel(g) { return g.label + ' · ' + P.date(g.from) + ' → ' + P.date(g.to); }
 
@@ -219,16 +229,18 @@
       var o = state.overview;
       $('o-reg').textContent = o.totals.registered;
       $('o-paid').textContent = o.totals.paid;
+      $('o-paid-label').textContent = 'Paid (real)' + (o.totals.demoPaid ? ' \u00b7 ' + o.totals.demoPaid + ' demo' : '');
+      $('testBanner').hidden = !!o.paymentsLive;
       $('o-rev').textContent = P.inr(o.totals.revenueInr);
       $('o-due').textContent = P.inr(o.referrals.earned.amountInr);
       $('o-r-pending').textContent = o.referrals.pending.count + ' · ' + P.inr(o.referrals.pending.amountInr);
       $('o-r-earned').textContent = o.referrals.earned.count + ' · ' + P.inr(o.referrals.earned.amountInr);
       $('o-r-paid').textContent = o.referrals.paid.count + ' · ' + P.inr(o.referrals.paid.amountInr);
-      $('o-r-cancel').textContent = o.referrals.cancelled.count;
+      $('o-r-cancel').textContent = (o.referrals.demo ? o.referrals.demo.count : 0) + ' \u00b7 ' + o.referrals.cancelled.count;
       $('o-batches').innerHTML = o.groups.map(function (g) {
         return '<button class="batch-tile" type="button" data-key="' + e(g.key) + '"><small>' + e(g.label) + '</small>' +
           '<div class="dates">' + P.date(g.from) + ' → ' + P.date(g.to) + '</div>' +
-          '<div class="nums"><span><b>' + g.registered + '</b> registered</span><span><b>' + g.paid + '</b> paid</span></div>' +
+          '<div class="nums"><span><b>' + g.registered + '</b> registered</span><span><b>' + g.paid + '</b> paid</span>' + (g.demoPaid ? '<span><b>' + g.demoPaid + '</b> demo</span>' : '') + '</div>' +
           '<div class="muted" style="font-size:.8rem;margin-top:8px">' + P.inr(g.revenueInr) + ' collected</div></button>';
       }).join('') || '<div class="empty">No batches yet.</div>';
       $('o-batches').querySelectorAll('[data-key]').forEach(function (b) {
@@ -248,7 +260,9 @@
       var q = $('q').value.trim().toLowerCase(), b = $('f-batch').value, pay = $('f-pay').value, rf = $('f-ref').value;
       return state.students.filter(function (s) {
         if (b && groupKey(s) !== b) return false;
-        if (pay && s.paymentDone !== pay) return false;
+        if (pay === 'Yes' && payState(s) !== 'real') return false;
+        if (pay === 'Demo' && payState(s) !== 'demo') return false;
+        if (pay === 'No' && payState(s) !== 'none') return false;
         if (rf === 'referred' && !s.referredBy) return false;
         if (rf === 'referrer' && !s.referredTotal) return false;
         if (q) {
@@ -271,7 +285,7 @@
             '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
             '<td>' + e(s.college) + '<br><span class="muted" style="font-size:.8rem">' + e(s.degree) + ' · Yr ' + s.collegeYear + '</span></td>' +
             '<td>' + batchText(s) + '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span></td>' +
-            '<td>' + (s.paymentDone === 'Yes' ? '<span class="tag green">Paid ' + P.inr(s.amountPaidInr) + '</span>' : '<span class="tag amber">Not paid</span>') + '</td>' +
+            '<td>' + payTag(s, true) + '</td>' +
             '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
             '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
             '<td class="num">' + (s.cashbackDueInr ? P.inr(s.cashbackDueInr) : '<span class="muted">—</span>') + '</td></tr>';
@@ -296,9 +310,9 @@
       if (!list.length) { $('r-table').innerHTML = '<div class="empty">Nothing here.</div>'; return; }
       $('r-table').innerHTML = '<table class="tbl"><thead><tr><th>Referrer (pay to)</th><th>Friend referred</th><th>Status</th><th class="num">Amount</th><th>Dates</th><th>Payout reference</th><th></th></tr></thead><tbody>' +
         list.map(function (w) {
-          var rs = RSTAT[w.status] || [w.status, ''];
+          var rs = w.demo && w.status !== 'cancelled' ? ['Demo \u2014 no cashback', 'violet'] : (RSTAT[w.status] || [w.status, '']);
           var actions = '';
-          if (w.status === 'earned') actions += '<button class="copy-btn" data-pay="' + w.id + '" type="button">Mark paid</button> ';
+          if (w.status === 'earned' && !w.demo) actions += '<button class="copy-btn" data-pay="' + w.id + '" type="button">Mark paid</button> ';
           if (w.status === 'earned' || w.status === 'pending') actions += '<button class="copy-btn" data-cancel="' + w.id + '" type="button">Cancel</button>';
           return '<tr><td>' + e(w.referrer.name) + '<br><span class="muted mono">' + e(w.referrer.registrationId) + '</span><br><span class="muted">+91 ' + e(w.referrer.phone) + '</span></td>' +
             '<td>' + e(w.referred.name) + '<br><span class="muted mono">' + e(w.referred.registrationId) + '</span></td>' +
@@ -454,7 +468,7 @@
       var paid = s.paymentDone === 'Yes';
       var items = [];
       items.push('<li>The student\u2019s registration and all personal details</li>');
-      if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '. Razorpay keeps its own record; refunds are done in the Razorpay dashboard.' : '') + '</li>');
+      if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? (s.paymentMode === 'test' ? ' \u2014 demo payment only (test mode, no real money)' : ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '. Razorpay keeps its own record; refunds are done in the Razorpay dashboard.') : '') + '</li>');
       if (d.referrals.length) items.push('<li><b>' + d.referrals.length + ' referral cashback record(s)</b> where they referred someone' + (s.cashbackDueInr ? ' (' + P.inr(s.cashbackDueInr) + ' still due to them)' : '') + '</li>');
       if (s.referredBy) items.push('<li>The cashback ' + e(s.referredBy.name) + ' gets for referring them</li>');
       if (s.referralCode) items.push('<li>Their referral code <b>' + e(s.referralCode) + '</b> stops working; friends who used it stay registered</li>');
@@ -501,19 +515,19 @@
             ['Type', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)], ['Dates', P.date(s.from) + ' → ' + P.date(s.to)]
           ]) +
           '<h3>Payment</h3>' + kv([
-            ['Status', s.paymentDone === 'Yes' ? '<span class="tag green">Paid</span>' : '<span class="tag amber">Not paid</span>', true],
+            ['Status', payTag(s, false) + (payState(s) === 'demo' ? ' <span class="muted" style="font-size:.8rem">Razorpay test mode \u2014 no real money</span>' : ''), true],
             s.paymentDone === 'Yes' ? ['Amount', P.inr(s.amountPaidInr)] : null,
             s.paymentId ? ['Payment ID', '<span class="mono">' + e(s.paymentId) + '</span>', true] : null,
             s.paidAt ? ['Paid on', P.date(s.paidAt)] : null
           ]) +
           (r.data.payments.length ? '<div class="table-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Order</th><th>Status</th><th class="num">Amount</th><th>When</th></tr></thead><tbody>' +
             r.data.payments.map(function (p) {
-              return '<tr><td class="mono">' + e(p.orderId) + (p.paymentId ? '<br>' + e(p.paymentId) : '') + '</td><td>' + e(p.status) + (p.paidVia ? ' (' + e(p.paidVia) + ')' : '') + (p.failureReason ? '<br><span class="muted">' + e(p.failureReason) + '</span>' : '') + '</td><td class="num">' + P.inr(p.amountInr) + '</td><td style="font-size:.8rem">' + P.date(p.createdAt) + '</td></tr>';
+              return '<tr><td class="mono">' + e(p.orderId) + (p.paymentId ? '<br>' + e(p.paymentId) : '') + '</td><td>' + e(p.status) + (p.paidVia ? ' (' + e(p.paidVia) + ')' : '') + (p.mode === 'test' ? ' <span class="tag violet">Demo</span>' : ' <span class="tag green">Real</span>') + (p.failureReason ? '<br><span class="muted">' + e(p.failureReason) + '</span>' : '') + '</td><td class="num">' + P.inr(p.amountInr) + '</td><td style="font-size:.8rem">' + P.date(p.createdAt) + '</td></tr>';
             }).join('') + '</tbody></table></div>' : '') +
           '<h3>Referrals</h3>' + kv([
             ['Own referral code', s.referralCode ? '<span class="mono">' + e(s.referralCode) + '</span>' : '<span class="muted">Issued after payment</span>', true],
             ['Referred by', s.referredBy ? e(s.referredBy.name) + ' <span class="muted mono">' + e(s.referredBy.registrationId) + ' · ' + e(s.referredBy.code) + '</span>' : 'No one', true],
-            ['Friends referred', s.referredTotal + ' (' + s.referredJoined + ' paid)'],
+            ['Friends referred', s.referredTotal + ' (' + s.referredJoined + ' paid' + (s.referredDemo ? ', ' + s.referredDemo + ' demo' : '') + ')'],
             ['Cashback', P.inr(s.cashbackDueInr) + ' to pay · ' + P.inr(s.cashbackPaidInr) + ' paid']
           ]) +
           (r.data.referrals.length ? '<div class="table-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Friend</th><th>Cashback</th><th class="num">Amount</th></tr></thead><tbody>' +
@@ -559,9 +573,9 @@
       a.download = name; document.body.appendChild(a); a.click(); a.remove();
     }
     $('csv-students').addEventListener('click', function () {
-      var rows = [['Unique ID', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Paid', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at']];
+      var rows = [['Unique ID', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at']];
       filteredStudents().forEach(function (s) {
-        rows.push([s.registrationId, s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, s.dateMode, s.batchNumber || '', s.from, s.to, s.paymentDone, s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt]);
+        rows.push([s.registrationId, s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, s.dateMode, s.batchNumber || '', s.from, s.to, { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt]);
       });
       download('internship-students.csv', csv(rows));
     });
