@@ -148,4 +148,22 @@
     }, { threshold: .4 });
     rio.observe(rc);
   }
+
+  /* ---------- Referral highlight card: count ₹0 → ₹100 when it scrolls into view ---------- */
+  var hn = document.querySelector('.hr-num');
+  if (hn && !reduce && 'IntersectionObserver' in window) {
+    hn.textContent = '0';
+    var hio = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      hio.disconnect();
+      var t0 = null;
+      (function step(t) {
+        if (!t0) t0 = t;
+        var k = Math.min(1, (t - t0) / 1100), eased = 1 - Math.pow(1 - k, 3);
+        hn.textContent = Math.round(eased * 100);
+        if (k < 1) requestAnimationFrame(step);
+      })(performance.now());
+    }, { threshold: .5 });
+    hio.observe(hn);
+  }
 })();
