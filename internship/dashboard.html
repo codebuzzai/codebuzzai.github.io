@@ -11,6 +11,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window,document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1393333359453502');
+  fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" alt=""
+  src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
+  <!-- End Meta Pixel Code -->
 </head>
 <body>
   <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
@@ -25,7 +41,7 @@
     <div class="container">
       <div class="portal-head">
         <div>
-          <span class="eyebrow">Student portal</span>
+          <span class="eyebrow" id="eyebrow">Student portal</span>
           <h1 id="hello">Loading your internship&hellip;</h1>
           <p id="sub" class="mono"></p>
         </div>
@@ -36,8 +52,8 @@
       <div class="cards" id="content" hidden>
         <div class="card wide">
           <div class="stat-row">
-            <div class="stat"><strong id="st-intern">&mdash;</strong><span>Internship</span></div>
-            <div class="stat"><strong id="st-pay">&mdash;</strong><span>Payment</span></div>
+            <div class="stat"><strong id="st-intern">&mdash;</strong><span id="st-intern-l">Internship</span></div>
+            <div class="stat"><strong id="st-pay">&mdash;</strong><span id="st-pay-l">Payment</span></div>
             <div class="stat"><strong id="st-friends">0</strong><span>Friends joined</span></div>
             <div class="stat"><strong id="st-cash">&#8377;0</strong><span>Cashback earned</span></div>
           </div>
@@ -46,12 +62,12 @@
         <!-- Referral code -->
         <div class="card wide" id="refCard"></div>
 
-        <div class="card">
+        <div class="card" id="internCard">
           <h2>Internship details <span class="tag" id="intern-tag"></span></h2>
           <dl class="kv" id="intern"></dl>
         </div>
 
-        <div class="card">
+        <div class="card" id="payCard">
           <h2>Payment <span class="tag" id="pay-tag"></span></h2>
           <dl class="kv" id="pay"></dl>
           <div id="pay-action"></div>
@@ -67,6 +83,7 @@
             <div class="stat"><strong id="rt-due">&#8377;0</strong><span>Cashback to be paid</span></div>
           </div>
           <div class="table-wrap" id="ref-table"></div>
+          <div class="hold-note" id="holdNote" hidden></div>
           <p class="muted" style="font-size:.82rem;margin-top:12px">Cashback is earned when your friend completes their payment. CodeBuzz.ai sends it to your registered mobile number by UPI/bank transfer; the transaction reference appears here.</p>
         </div>
 
@@ -101,7 +118,7 @@
   <footer class="footer" style="margin-top:60px">
     <div class="container">
       <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
-      <span>Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+      <span><a href="terms.html">Terms</a> · Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
     </div>
   </footer>
 
@@ -124,13 +141,73 @@
     var REWARD = { pending: ['Waiting for friend’s payment', 'amber'], earned: ['Earned — to be paid', 'blue'], paid: ['Paid to you', 'green'], cancelled: ['Cancelled', 'red'] };
     function tag(el, text, cls) { el.textContent = text; el.className = 'tag ' + (cls || ''); }
 
+    // Referral code card + referrals table (students and ambassadors)
+    function fillReferrals(ref, amb) {
+      var who = amb ? 'junior' : 'friend';
+      if (ref.code) {
+        var wa = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program (2 weeks, certificate included). Use my referral code ' + ref.code + ' when you register: ' + ref.shareUrl);
+        $('refCard').innerHTML =
+          '<h2>Your referral code <span class="tag green">Earn ' + P.inr(ref.rewardPerReferralInr) + ' per ' + who + '</span></h2>' +
+          '<div class="copy-inline"><span class="ref-code-sm" style="font-size:1.4rem">' + e(ref.code) + '</span>' +
+          '<button class="copy-btn" id="cp-code" type="button">Copy code</button>' +
+          '<button class="copy-btn" id="cp-link" type="button">Copy link</button>' +
+          '<a class="copy-btn" href="' + e(wa) + '" target="_blank" rel="noopener">Share on WhatsApp</a></div>' +
+          '<p class="muted" style="font-size:.88rem;margin-top:14px">' + (amb ? 'Juniors' : 'Friends') + ' enter this code in the “Referral code” field when they register. You earn ' + P.inr(ref.rewardPerReferralInr) + ' for every ' + who + ' who completes their payment — no limit.</p>';
+        $('cp-code').onclick = function () { P.copy(ref.code, this, 'Copy code'); };
+        $('cp-link').onclick = function () { P.copy(ref.shareUrl, this, 'Copy link'); };
+      }
+
+      $('rt-ref').textContent = ref.totals.referred;
+      $('rt-earned').textContent = P.inr(ref.totals.earnedInr);
+      $('rt-paid').textContent = P.inr(ref.totals.paidOutInr);
+      $('rt-due').textContent = P.inr(ref.totals.dueInr);
+      $('st-friends').textContent = ref.totals.joined;
+      $('st-cash').textContent = P.inr(ref.totals.earnedInr);
+      if (!ref.referrals.length) {
+        $('ref-table').innerHTML = '<div class="empty">No referrals yet. Share your code to start earning.</div>';
+      } else {
+        $('ref-table').innerHTML = '<table class="tbl"><thead><tr><th>' + (amb ? 'Junior' : 'Friend') + '</th><th>Registered</th><th>Their payment</th><th>Cashback</th><th class="num">Amount</th><th>Paid to you</th></tr></thead><tbody>' +
+          ref.referrals.map(function (x) {
+            var rs = x.demo && x.rewardStatus !== 'cancelled' ? ['Demo — no cashback', 'violet'] : (REWARD[x.rewardStatus] || [x.rewardStatus, '']);
+            return '<tr><td>' + e(x.name) + '</td><td>' + P.date(x.registeredOn) + '</td>' +
+              '<td>' + (x.paymentDone !== 'Yes' ? '<span class="tag amber">Pending</span>' : (x.demo ? '<span class="tag violet">Demo paid</span>' : '<span class="tag green">Paid</span>')) + '</td>' +
+              '<td><span class="tag ' + rs[1] + '">' + rs[0] + '</span></td><td class="num">' + P.inr(x.amountInr) + '</td>' +
+              '<td>' + (x.paidOn ? P.date(x.paidOn) + '<br><span class="muted mono">' + e(x.payoutReference) + '</span>' : '<span class="muted">—</span>') + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
+      if (!amb && ref.payoutOnHold) {
+        $('holdNote').textContent = 'Your cashback is sent once your own payment is complete.';
+        $('holdNote').hidden = false;
+      }
+    }
+
     P.api('/student/me', { auth: 'student' }).then(function (r) {
+      // Scheduled batch, not paid yet → payment first
+      if (r.status === 402 && r.data.paymentRequired) { location.replace('payment.html?id=' + encodeURIComponent(r.data.registrationId)); return; }
       if (!r.ok) return P.msg($('m'), r.data.message || 'Could not load your details.');
       var d = r.data, s = d.student, i = d.internship, p = d.payment, ref = d.referral;
+      var amb = d.participantType === 'ambassador';
 
       $('hello').textContent = 'Hi, ' + s.fullName.split(' ')[0];
-      $('sub').textContent = 'Unique ID: ' + s.registrationId;
+      $('sub').textContent = (amb ? 'Ambassador ID: ' : 'Unique ID: ') + s.registrationId;
       $('content').hidden = false;
+      fillReferrals(ref, amb);
+
+      if (amb) {
+        // Student Ambassadors: no internship or payment, just referrals
+        $('eyebrow').textContent = 'Student Ambassador portal';
+        $('internCard').hidden = true; $('payCard').hidden = true;
+        $('st-intern').textContent = ref.totals.referred; $('st-intern-l').textContent = 'Juniors referred';
+        $('st-pay').textContent = P.inr(ref.totals.dueInr); $('st-pay-l').textContent = 'Cashback to be paid';
+        document.querySelectorAll('.stat span').forEach(function (sp) { sp.textContent = sp.textContent.replace(/^Friends /, 'Juniors '); });
+        $('ref-by').hidden = true;
+        kv($('me'), [
+          ['Ambassador ID', '<span class="mono">' + e(s.registrationId) + '</span>', true],
+          ['Name', s.fullName], ['Email', s.email], ['Mobile', '+91 ' + s.phone],
+          ['Registered on', P.date(s.registeredAt)]
+        ]);
+        return;
+      }
 
       // Summary
       var st = STATE[i.state] || STATE.unknown;
@@ -140,26 +217,6 @@
       var payText = p.paymentDone !== 'Yes' ? 'Pending' : (demo ? 'Demo paid' : 'Paid');
       $('st-pay').textContent = payText;
       $('st-pay').style.color = p.paymentDone !== 'Yes' ? '#FEBC2E' : (demo ? '#C9B6FF' : 'var(--green)');
-      $('st-friends').textContent = ref.totals.joined;
-      $('st-cash').textContent = P.inr(ref.totals.earnedInr);
-
-      // Referral code card
-      if (ref.code) {
-        var wa = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program (2 weeks, certificate included). Use my referral code ' + ref.code + ' when you register: ' + ref.shareUrl);
-        $('refCard').innerHTML =
-          '<h2>Your referral code <span class="tag green">Earn ' + P.inr(ref.rewardPerReferralInr) + ' per friend</span></h2>' +
-          '<div class="copy-inline"><span class="ref-code-sm" style="font-size:1.4rem">' + e(ref.code) + '</span>' +
-          '<button class="copy-btn" id="cp-code" type="button">Copy code</button>' +
-          '<button class="copy-btn" id="cp-link" type="button">Copy link</button>' +
-          '<a class="copy-btn" href="' + e(wa) + '" target="_blank" rel="noopener">Share on WhatsApp</a></div>' +
-          '<p class="muted" style="font-size:.88rem;margin-top:14px">Friends enter this code in the “Referral code” field when they register. You earn ' + P.inr(ref.rewardPerReferralInr) + ' for every friend who completes their payment — no limit.</p>';
-        $('cp-code').onclick = function () { P.copy(ref.code, this, 'Copy code'); };
-        $('cp-link').onclick = function () { P.copy(ref.shareUrl, this, 'Copy link'); };
-      } else {
-        $('refCard').innerHTML =
-          '<h2>Your referral code <span class="tag amber">After payment</span></h2>' +
-          '<p class="muted">Complete your payment to get your personal referral code. Then earn ' + P.inr(ref.rewardPerReferralInr) + ' cashback for every friend who joins with it.</p>';
-      }
 
       // Internship
       tag($('intern-tag'), st[0], st[1]);
@@ -193,22 +250,6 @@
       kv($('ref-by'), [
         ['Referred by', ref.referredBy ? e(ref.referredBy.name) + ' <span class="muted mono">(' + e(ref.referredBy.code) + ')</span>' : 'No one', true]
       ]);
-      $('rt-ref').textContent = ref.totals.referred;
-      $('rt-earned').textContent = P.inr(ref.totals.earnedInr);
-      $('rt-paid').textContent = P.inr(ref.totals.paidOutInr);
-      $('rt-due').textContent = P.inr(ref.totals.dueInr);
-      if (!ref.referrals.length) {
-        $('ref-table').innerHTML = '<div class="empty">' + (ref.code ? 'No referrals yet. Share your code to start earning.' : 'Referrals will appear here once you start sharing your code.') + '</div>';
-      } else {
-        $('ref-table').innerHTML = '<table class="tbl"><thead><tr><th>Friend</th><th>Registered</th><th>Their payment</th><th>Cashback</th><th class="num">Amount</th><th>Paid to you</th></tr></thead><tbody>' +
-          ref.referrals.map(function (x) {
-            var rs = x.demo && x.rewardStatus !== 'cancelled' ? ['Demo \u2014 no cashback', 'violet'] : (REWARD[x.rewardStatus] || [x.rewardStatus, '']);
-            return '<tr><td>' + e(x.name) + '</td><td>' + P.date(x.registeredOn) + '</td>' +
-              '<td>' + (x.paymentDone !== 'Yes' ? '<span class="tag amber">Pending</span>' : (x.demo ? '<span class="tag violet">Demo paid</span>' : '<span class="tag green">Paid</span>')) + '</td>' +
-              '<td><span class="tag ' + rs[1] + '">' + rs[0] + '</span></td><td class="num">' + P.inr(x.amountInr) + '</td>' +
-              '<td>' + (x.paidOn ? P.date(x.paidOn) + '<br><span class="muted mono">' + e(x.payoutReference) + '</span>' : '<span class="muted">—</span>') + '</td></tr>';
-          }).join('') + '</tbody></table>';
-      }
 
       // My details
       kv($('me'), [

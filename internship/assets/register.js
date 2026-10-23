@@ -1,4 +1,4 @@
-/* Registration form — validation, dependent dropdowns, 2-week period, API submit */
+/* Registration form — student or Student Ambassador, validation, dependent dropdowns, 2-week period, API submit */
 (function () {
   var CFG = window.CB_INTERNSHIP || {};
   var OTHERS = 'Others';
@@ -90,8 +90,8 @@
   var batch = $('batch');
   var customConsent = $('customConsent');
 
-  // Custom dates: start from tomorrow, and the 2 weeks must end by customLastDay (31 Dec 2026)
-  var lastDay = fromISO(CFG.customLastDay || '2026-12-31');
+  // Custom dates: start from tomorrow, and the 2 weeks must end by customLastDay (24 Jan 2027)
+  var lastDay = fromISO(CFG.customLastDay || '2027-01-24');
   fromDate.min = toISO(addDays(today, 1));
   fromDate.max = toISO(addDays(lastDay, -(DAYS - 1)));
 
@@ -137,6 +137,7 @@
   var picked = startParam && batch.querySelector('option[value="' + startParam.replace(/[^\d-]/g, '') + '"]');
   if (picked && !picked.disabled) batch.value = startParam;
   syncMode(); // also restores the right view if the browser kept "Custom dates" checked on back/refresh
+  // (the Student / Ambassador view is applied further down, once validation helpers exist)
 
   /* ---------- Phone: digits only ---------- */
   var phone = $('phone');
@@ -168,6 +169,41 @@
   refInput.addEventListener('input', function () { clearTimeout(refTimer); refTimer = setTimeout(checkRef, 450); });
   if (refInput.value) setTimeout(checkRef, 300);
 
+  /* ---------- Student or Student Ambassador ---------- */
+  var COMMON = ['fullName', 'email', 'phone'];      // the only fields an ambassador fills in
+  function isAmb() { return form.querySelector('input[name="participantType"]:checked').value === 'ambassador'; }
+  var TEXT = {
+    student: {
+      title: 'Register for the <span class="grad">internship</span>',
+      intro: 'Fill in your details below. All fields are mandatory. It takes about two minutes.',
+      step2: 'Payment', step3: 'Student login', submit: 'Register now', next: 'Next: payment',
+      consent: 'I confirm that the details above are correct, and I agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a>, including that the internship fee is non-refundable.'
+    },
+    ambassador: {
+      title: 'Become a <span class="grad">Student Ambassador</span>',
+      intro: 'For alumni who want to help their juniors. Three details, no fee — and ₹' + (CFG.referralRewardInr || 100) + ' for every junior who joins.',
+      step2: 'Referral code', step3: 'Your portal', submit: 'Join as ambassador', next: 'No fee for ambassadors',
+      consent: 'I confirm that the details above are correct, and I agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a> for Student Ambassadors.'
+    }
+  };
+  function syncType() {
+    var amb = isAmb(), t = TEXT[amb ? 'ambassador' : 'student'];
+    form.querySelectorAll('[data-student]').forEach(function (el) { el.hidden = amb; });
+    $('ambNote').hidden = !amb;
+    $('stuInfo').hidden = amb; $('ambInfo').hidden = !amb;
+    $('pageTitle').innerHTML = t.title; $('pageIntro').textContent = t.intro;
+    $('step2').textContent = t.step2; $('step3').textContent = t.step3;
+    $('submitLabel').textContent = t.submit; $('nextHint').textContent = t.next; $('consentText').innerHTML = t.consent;
+    $('fullName').placeholder = amb ? 'Your full name' : 'As on your college ID';
+    if (amb) { $('customConsentWrap').hidden = true; } else { syncMode(); }
+    form.querySelectorAll('.field.invalid').forEach(function (f) { f.classList.remove('invalid'); });
+    $('formError').classList.remove('show');
+  }
+  form.querySelectorAll('input[name="participantType"]').forEach(function (r) { r.addEventListener('change', syncType); });
+  if (new URLSearchParams(location.search).get('type') === 'ambassador') {
+    form.querySelector('input[name="participantType"][value="ambassador"]').checked = true;
+  }
+
   /* ---------- Validation ---------- */
   var NAME_RE = /^[A-Za-z][A-Za-z .'-]{1,99}$/;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -197,6 +233,7 @@
     fromDate:    function () { return mode() !== 'custom' || inRange(fromDate.value, fromDate.min, fromDate.max); }
   };
 
+  function activeChecks() { return Object.keys(checks).filter(function (id) { return !isAmb() || COMMON.indexOf(id) >= 0; }); }
   function validateField(id) { return setErr($(id), !checks[id]()); }
 
   Object.keys(checks).forEach(function (id) {
@@ -222,29 +259,61 @@
   function showError(msg) { errBox.textContent = msg; errBox.classList.add('show'); }
   function setLoading(on) {
     btn.disabled = on; btn.classList.toggle('loading', on);
-    $('submitLabel').textContent = on ? 'Registering…' : 'Register now';
+    $('submitLabel').textContent = on ? 'Registering…' : TEXT[isAmb() ? 'ambassador' : 'student'].submit;
+  }
+
+  function copyText(text, btnEl, label) {
+    var done = function () { btnEl.textContent = 'Copied'; setTimeout(function () { btnEl.textContent = label; }, 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
+  }
+
+  // Ambassadors stay on this page and see their referral code straight away
+  function showAmbassadorDone(d, payload) {
+    var link = location.origin + location.pathname + '?ref=' + encodeURIComponent(d.referralCode);
+    $('adName').textContent = payload.fullName.split(' ')[0];
+    $('adEmail').textContent = payload.email;
+    $('adCode').textContent = d.referralCode;
+    $('adId').textContent = d.registrationId;
+    if (d.referralRewardInr) $('adReward').textContent = d.referralRewardInr;
+    $('adCopyCode').onclick = function () { copyText(d.referralCode, $('adCopyCode'), 'Copy'); };
+    $('adCopyLink').onclick = function () { copyText(link, $('adCopyLink'), 'Copy share link'); };
+    $('adWhatsApp').href = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program — 2 weeks of programming, system design, AI basics and hands-on coding, with a certificate. Use my referral code ' + d.referralCode + ' when you register: ' + link);
+    form.hidden = true;
+    $('ambDone').hidden = false;
+    document.querySelectorAll('.stepper .st')[0].className = 'st done';
+    document.querySelectorAll('.stepper .st b')[0].textContent = '\u2713';
+    document.querySelectorAll('.stepper .st')[1].className = 'st active';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     errBox.classList.remove('show');
 
+    var amb = isAmb();
     var ok = true, first = null;
-    Object.keys(checks).forEach(function (id) {
+    activeChecks().forEach(function (id) {
       var good = validateField(id);
       if (!good && !first) first = $(id);
       ok = ok && good;
     });
     if (!consent.checked) { $('consentWrap').classList.add('invalid'); ok = false; if (!first) first = consent; }
-    if (mode() === 'custom' && !customConsent.checked) { $('customConsentWrap').classList.add('invalid'); ok = false; if (!first) first = customConsent; }
+    if (!amb && mode() === 'custom' && !customConsent.checked) { $('customConsentWrap').classList.add('invalid'); ok = false; if (!first) first = customConsent; }
     if (!ok) {
       showError('Please fix the highlighted fields.');
       if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { first.focus({ preventScroll: true }); }, 400); }
       return;
     }
-    syncPeriod();
+    if (!amb) syncPeriod();
 
-    var payload = {
+    var payload = amb ? {
+      participantType: 'ambassador',
+      fullName:       clean($('fullName').value),
+      email:          $('email').value.trim().toLowerCase(),
+      phone:          phone.value,
+      consent:        true
+    } : {
+      participantType: 'student',
       fullName:       clean($('fullName').value),
       fatherName:     clean($('fatherName').value),
       dateOfBirth:    dob.value,
@@ -275,10 +344,22 @@
         return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; });
       })
       .then(function (r) {
+        if (r.res.ok && r.data.registrationId && amb) {
+          if (window.gtag) gtag('event', 'ambassador_registered');
+          if (window.fbq) fbq('track', 'Lead', { content_name: 'Student Ambassador' });
+          showAmbassadorDone(r.data, payload);
+          return;
+        }
         if (r.res.ok && r.data.registrationId) {
           try { sessionStorage.setItem('cbi_reg_id', r.data.registrationId); } catch (_) {}
           if (window.gtag) gtag('event', 'internship_registered');
-          window.location.href = 'payment.html?id=' + encodeURIComponent(r.data.registrationId);
+          var next = 'payment.html?id=' + encodeURIComponent(r.data.registrationId);
+          if (window.fbq) {
+            fbq('track', 'CompleteRegistration');
+            setTimeout(function () { window.location.href = next; }, 300); // let the pixel request leave first
+          } else {
+            window.location.href = next;
+          }
           return;
         }
         if (r.data.errors) {
@@ -292,4 +373,5 @@
         setLoading(false);
       });
   });
+  syncType();
 })();

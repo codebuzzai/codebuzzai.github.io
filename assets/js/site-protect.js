@@ -1,7 +1,7 @@
 /*
  * CodeBuzz.ai — right-click / inspect deterrent
  * ------------------------------------------------
- * Set these to true before deploying. Both are OFF by default, and the
+ * Both are ON. Set them to false to switch off. The
  * script never runs on localhost (so local development is unaffected).
  *
  * Note: this only deters casual users. Browser menus, view-source: and
@@ -9,8 +9,8 @@
  */
 (function () {
   var CONFIG = {
-    disableRightClick: false,       // block the right-click menu (still allowed inside form fields)
-    blockInspectShortcuts: false    // block F12, Ctrl+Shift+I/J/C and Ctrl+U (Cmd+Option on Mac)
+    disableRightClick: true,        // block the right-click menu (still allowed inside form fields)
+    blockInspectShortcuts: true     // block F12, Ctrl+Shift+I/J/C and Ctrl+U (Cmd+Option on Mac)
   };
 
   if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;

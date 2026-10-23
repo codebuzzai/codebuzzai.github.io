@@ -11,6 +11,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window,document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1393333359453502');
+  fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" alt=""
+  src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
+  <!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -70,10 +86,11 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
           <p class="pay-note" id="payNote">Pay securely with UPI, cards or net banking.</p>
+          <p class="pay-note" style="margin-top:4px;font-size:.78rem">By paying, you agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a>. The internship fee is non-refundable.</p>
 
           <div class="ref-box" id="refBox" hidden>
             <h3>Refer friends, earn &#8377;<span id="refAmt">100</span> each</h3>
-            <p>Share your referral code. When a friend registers with it and pays, you get cashback. No limit on referrals.</p>
+            <p id="refText">Your referral code is ready. When a friend registers with it and pays, you get cashback. No limit on referrals.</p>
             <div class="ref-row">
               <span class="ref-code-sm" id="refCode"></span>
               <button class="copy-btn" id="refCopy" type="button">Copy link</button>
@@ -81,6 +98,11 @@
             </div>
           </div>
           <a href="login.html" class="btn btn-ghost" id="loginLink" style="width:100%;margin-top:14px" hidden>Go to student login</a>
+          <div id="skipWrap" hidden>
+            <a class="btn btn-ghost" id="skipBtn" href="login.html" style="width:100%;margin-top:14px">Skip for now &mdash; pay later</a>
+            <p class="pay-note" style="margin-top:8px">You chose custom dates, so you can pay later from your student portal. Your seat is confirmed once the payment is complete.</p>
+          </div>
+          <p class="pay-note" style="margin-top:12px">We've emailed your registration details. Log in to the student portal anytime with your email.</p>
         </div>
       </div>
     </section>
@@ -89,7 +111,7 @@
   <footer class="footer">
     <div class="container">
       <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
-      <span>&copy; <span data-year></span> CodeBuzz.ai · <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+      <span>&copy; <span data-year></span> CodeBuzz.ai · <a href="terms.html">Terms</a> · <a href="../privacy.html">Privacy</a> · <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
     </div>
   </footer>
 
@@ -156,21 +178,32 @@
       $('payCard').querySelector('h1').textContent = 'Your seat is confirmed!';
       $('payCard').querySelector('h1 + p').textContent = 'Welcome to the CodeBuzz AI Internship Program.';
       var arrow = btn.querySelector('svg'); if (arrow) arrow.style.display = 'none';
-      say(demo ? 'Demo payment received (Razorpay test mode \u2014 no real money was charged). Log in to the student portal with your unique ID to see your details.'
-               : 'Payment received. Log in to the student portal with your unique ID to see your details anytime.');
+      say(demo ? 'Demo payment received (Razorpay test mode \u2014 no real money was charged). Log in to the student portal with your email to see your details.'
+               : 'Payment received. Log in to the student portal with your email to see your details anytime.');
+      $('refText').textContent = 'Share your referral code. When a friend registers with it and pays, you get cashback. No limit on referrals.';
       $('loginLink').hidden = false;
+      $('skipWrap').hidden = true;
     }
 
     function load() {
       return fetch(API + '/api/internship/registrations/' + encodeURIComponent(id))
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function (d) {
+          if (d.participantType === 'ambassador') { location.replace('login.html'); return d; }   // ambassadors don't pay
           $('sName').textContent = d.name;
           $('sPeriod').textContent = fmt(d.internshipFrom) + ' → ' + fmt(d.internshipTo);
           if (d.feeInr) { feeInr = d.feeInr; $('sAmount').textContent = rupees(feeInr); }
           var demoNeedsReal = d.paymentDone === 'Yes' && d.paymentMode === 'test' && d.paymentsLive;
-          if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode); showReferral(d.referralCode, d.referralRewardInr); }
+          showReferral(d.referralCode, d.referralRewardInr);   // everyone gets a code at registration
+          if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode); }
           else {
+            // Custom dates may pay later from the portal; scheduled batches must pay now
+            if (d.dateMode === 'custom') {
+              var loggedIn = false; try { loggedIn = !!sessionStorage.getItem('cbi_student_token'); } catch (_) {}
+              $('skipBtn').href = loggedIn ? 'dashboard.html' : 'login.html?skip=1';
+              $('skipWrap').hidden = false;
+            }
+            $('refText').textContent = 'Your referral code is ready \u2014 share it now. When a friend registers with it and pays, you earn \u20b9' + (d.referralRewardInr || 100) + '. Your cashback is sent once your own payment is complete.';
             setBusy(false);
             if (demoNeedsReal) { $('sPay').textContent = 'Demo paid \u2014 real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
           }
@@ -240,7 +273,7 @@
                 razorpay_payment_id: resp.razorpay_payment_id,
                 razorpay_signature: resp.razorpay_signature
               }).then(function (v) {
-                if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); }
+                if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: feeInr, currency: 'INR', content_name: 'CodeBuzz AI Internship' }); }
                 else waitForConfirmation(5);
               }).catch(function () { waitForConfirmation(5); });
             },
