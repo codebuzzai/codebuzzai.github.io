@@ -531,7 +531,7 @@
       var paid = s.paymentDone === 'Yes';
       var items = [];
       items.push(isAmb(s) ? '<li>The ambassador\u2019s registration and details</li>' : '<li>The student\u2019s registration and all personal details</li>');
-      if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? (s.paymentMode === 'test' ? ' \u2014 demo payment only (test mode, no real money)' : ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '. Razorpay keeps its own record; refunds are done in the Razorpay dashboard.') : '') + '</li>');
+      if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? (s.paymentMode === 'test' ? ' \u2014 demo payment only (test mode, no real money)' : ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '.') : '') + '</li>');
       if (d.referrals.length) items.push('<li><b>' + d.referrals.length + ' referral cashback record(s)</b> where they referred someone' + (s.cashbackDueInr ? ' (' + P.inr(s.cashbackDueInr) + ' still due to them)' : '') + '</li>');
       if (s.referredBy) items.push('<li>The cashback ' + e(s.referredBy.name) + ' gets for referring them</li>');
       if (s.referralCode) items.push('<li>Their referral code <b>' + e(s.referralCode) + '</b> stops working; students who used it stay registered</li>');
@@ -638,7 +638,16 @@
 
     function wireDrawer(s, detail) {
         $('btnEdit').addEventListener('click', function () { renderEdit(s); });
-        $('btnDelete').addEventListener('click', function () { askDelete(detail); });
+        // A student who paid real money can't be deleted (keeps the payment record for accounts)
+        var realPaid = (detail.payments || []).some(function (p) { return p.status === 'paid' && p.mode === 'live'; }) ||
+          (s.paymentDone === 'Yes' && s.paymentMode === 'live');
+        if (realPaid) {
+          $('btnDelete').disabled = true;
+          $('btnDelete').title = 'Students with a real payment can\u2019t be deleted';
+          $('btnDelete').insertAdjacentHTML('afterend', '<span class="muted" style="font-size:.8rem;align-self:center">Has a real payment \u2014 can\u2019t be deleted</span>');
+        } else {
+          $('btnDelete').addEventListener('click', function () { askDelete(detail); });
+        }
         var rl = $('resetLogin');
         if (rl) rl.addEventListener('click', function () {
           confirmBox({

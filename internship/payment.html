@@ -267,15 +267,21 @@
             theme: { color: '#00C2FF' },
             handler: function (resp) {
               setBusy(true, 'Confirming payment…');
-              post('/api/internship/payments/verify', {
-                registrationId: id,
-                razorpay_order_id: resp.razorpay_order_id,
-                razorpay_payment_id: resp.razorpay_payment_id,
-                razorpay_signature: resp.razorpay_signature
-              }).then(function (v) {
-                if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: feeInr, currency: 'INR', content_name: 'CodeBuzz AI Internship' }); }
-                else waitForConfirmation(5);
-              }).catch(function () { waitForConfirmation(5); });
+              // The server confirms the money is captured; while the bank is still settling it answers
+              // "pending" (202), so we ask again a few times before falling back to polling.
+              (function verify(tries) {
+                post('/api/internship/payments/verify', {
+                  registrationId: id,
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature
+                }).then(function (v) {
+                  if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: feeInr, currency: 'INR', content_name: 'CodeBuzz AI Internship' }); }
+                  else if (v.data.pending && tries > 0) { say(v.data.message || 'Confirming your payment…'); setTimeout(function () { verify(tries - 1); }, 4000); }
+                  else if (v.status === 400) { setBusy(false); say(v.data.message || 'We could not verify this payment.', true); }
+                  else waitForConfirmation(5);
+                }).catch(function () { waitForConfirmation(5); });
+              })(4);
             },
             modal: {
               ondismiss: function () { if (!btn.textContent.match(/Confirming|complete/)) { setBusy(false); say('Payment cancelled. You can try again whenever you’re ready.'); } }
