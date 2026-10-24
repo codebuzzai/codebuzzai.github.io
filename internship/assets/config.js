@@ -15,7 +15,8 @@
     // Keep in sync with internship/index.html and INTERNSHIP_BATCHES in the API's deploy.ps1
     batches: ['2026-11-16', '2026-11-23', '2026-11-30', '2026-12-07', '2026-12-14',
               '2026-12-21', '2026-12-28', '2027-01-04', '2027-01-11'],
-    customLastDay: '2027-01-24', // custom-date internships must end on or before this day (end of the last batch)
+    feeInr: 1999,                // fallbacks only: the live prices come from the API (/pricing)
+    hardcopyFeeInr: 150,         // optional printed certificate, courier included
     referralRewardInr: 100,      // cashback per referred student who pays (keep in sync with the API)
     paymentsEnabled: true        // Razorpay checkout on payment.html (set false to pause online payments)
   };

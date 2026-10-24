@@ -52,7 +52,7 @@
         <div class="stepper" style="justify-content:center;margin-top:0">
           <div class="st done"><b>✓</b>Your details</div>
           <div class="bar"></div>
-          <div class="st active"><b>2</b>Payment</div>
+          <div class="st active"><b>2</b><span id="step2">Payment</span></div>
           <div class="bar"></div>
           <div class="st"><b>3</b>Student login</div>
         </div>
@@ -65,28 +65,45 @@
           <div class="success-ring">
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
           </div>
-          <h1>You're registered!</h1>
-          <p>Complete the payment to confirm your seat in the CodeBuzz AI Internship Program.</p>
-
-          <div class="reg-id">
-            <span id="regId">—</span>
-            <button class="copy-btn" id="copyBtn" type="button">Copy</button>
-          </div>
-          <div style="font-size:.82rem;color:var(--dim)">Your registration ID — please save it</div>
+          <h1 id="payTitle">You're registered!</h1>
+          <p id="payIntro">Complete the payment to confirm your seat in the CodeBuzz AI Internship Program.</p>
 
           <div class="summary" id="summary">
             <div><span>Name</span><b id="sName">Loading…</b></div>
-            <div><span>Internship period</span><b id="sPeriod">Loading…</b></div>
-            <div><span>Amount</span><b id="sAmount">—</b></div>
+            <div><span>Internship</span><b id="sPeriod">Loading…</b></div>
             <div><span>Payment</span><b class="pending" id="sPay">Pending</b></div>
+            <div class="ref-id"><span>Registration ID</span><b id="regId">—</b></div>
           </div>
 
-          <button class="btn btn-primary btn-lg" id="payBtn" style="width:100%">
-            <span id="payLabel">Proceed to payment</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
+          <div id="payArea" hidden>
+            <label class="addon" id="hardcopyWrap" style="text-align:left;margin-bottom:14px">
+              <input type="checkbox" id="hardcopy" />
+              <span>
+                <strong>Add a printed certificate <b class="addon-price">+&#8377;<span id="hcFee">150</span></b></strong>
+                <small>Couriered to your home address after you complete the program. Courier charges included. Optional.</small>
+              </span>
+            </label>
+
+            <div class="breakup" style="text-align:left">
+              <h3>Fee summary</h3>
+              <div class="bk-row"><span>Internship fee</span><b id="bkFee">&#8377;1,999</b></div>
+              <div class="bk-row" id="bkHcRow" hidden><span>Certificate hard copy <small>(incl. courier)</small></span><b id="bkHc">&#8377;150</b></div>
+              <div class="bk-row bk-total"><span id="bkTotalLabel">Total</span><b id="bkTotal">&#8377;1,999</b></div>
+            </div>
+
+            <button class="btn btn-primary btn-lg" id="payBtn" style="width:100%">
+              <span id="payLabel">Proceed to payment</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
           <p class="pay-note" id="payNote">Pay securely with UPI, cards or net banking.</p>
-          <p class="pay-note" style="margin-top:4px;font-size:.78rem">By paying, you agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a>. The internship fee is non-refundable.</p>
+          <p class="pay-note" id="termsNote" style="margin-top:4px;font-size:.78rem">By paying, you agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a>. The internship fee is non-refundable.</p>
+
+          <!-- "Choose date later": pay now, or skip and pay later from the portal -->
+          <div id="laterArea" hidden>
+            <a href="login.html?skip=1" class="btn btn-ghost" id="skipBtn" style="width:100%;margin-top:14px">Skip for now &mdash; pay later</a>
+            <p class="pay-note" style="margin-top:8px">You chose to pick your dates later. Choose your batch anytime in the student portal &mdash; and pay there if you skip now. Your seat is confirmed once the payment is complete.</p>
+          </div>
 
           <div class="ref-box" id="refBox" hidden>
             <h3>Refer friends, earn &#8377;<span id="refAmt">100</span> each</h3>
@@ -98,10 +115,6 @@
             </div>
           </div>
           <a href="login.html" class="btn btn-ghost" id="loginLink" style="width:100%;margin-top:14px" hidden>Go to student login</a>
-          <div id="skipWrap" hidden>
-            <a class="btn btn-ghost" id="skipBtn" href="login.html" style="width:100%;margin-top:14px">Skip for now &mdash; pay later</a>
-            <p class="pay-note" style="margin-top:8px">You chose custom dates, so you can pay later from your student portal. Your seat is confirmed once the payment is complete.</p>
-          </div>
           <p class="pay-note" style="margin-top:12px">We've emailed your registration details. Log in to the student portal anytime with your email.</p>
         </div>
       </div>
@@ -128,39 +141,47 @@
 
     var $ = function (x) { return document.getElementById(x); };
     var btn = $('payBtn'), note = $('payNote');
-    var feeInr = 0, busy = false;
+    var PRICE = { fee: CFG.feeInr || 1999, hardcopy: CFG.hardcopyFeeInr || 150 };
+    var busy = false, paid = false, currentMode = '';
     function fmt(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
     function rupees(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+    function total() { return PRICE.fee + ($('hardcopy').checked ? PRICE.hardcopy : 0); }
     function say(msg, isError) { note.textContent = msg; note.className = 'pay-note' + (isError ? ' pay-error' : ''); }
     function setBusy(on, label) {
       busy = on; btn.disabled = on; btn.classList.toggle('loading', on);
-      $('payLabel').textContent = label || (feeInr ? 'Pay ' + rupees(feeInr) : 'Proceed to payment');
+      $('payLabel').textContent = label || 'Pay ' + rupees(total());
     }
+    function syncBreakup() {
+      var hc = $('hardcopy').checked;
+      $('hcFee').textContent = PRICE.hardcopy;
+      $('bkFee').textContent = rupees(PRICE.fee);
+      $('bkHc').textContent = rupees(PRICE.hardcopy);
+      $('bkHcRow').hidden = !hc;
+      $('bkTotal').textContent = rupees(total());
+      if (!busy && !paid) $('payLabel').textContent = 'Pay ' + rupees(total());
+    }
+    $('hardcopy').addEventListener('change', syncBreakup);
     function post(path, body) {
       return fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); });
     }
 
     if (!/^CBI\d{2}-[A-Z0-9]{6}$/.test(id)) {
-      $('regId').textContent = 'Not found';
       $('summary').style.display = 'none';
-      btn.disabled = true;
       note.innerHTML = 'We couldn’t find your registration. Please <a href="register.html" style="color:var(--brand)">register again</a> or write to info@codebuzz.ai.';
       note.className = 'pay-note pay-error';
       return;
     }
-
     $('regId').textContent = id;
-    $('copyBtn').addEventListener('click', function () {
-      var done = function () { $('copyBtn').textContent = 'Copied'; setTimeout(function () { $('copyBtn').textContent = 'Copy'; }, 1600); };
-      if (navigator.clipboard) navigator.clipboard.writeText(id).then(done, done); else done();
-    });
 
-    function showReferral(code, amt) {
+    function showReferral(code, amt, isPaid) {
       if (!code) return;
       var link = location.origin + location.pathname.replace(/payment\.html$/, 'register.html') + '?ref=' + encodeURIComponent(code);
       $('refCode').textContent = code;
       if (amt) $('refAmt').textContent = amt;
+      $('refText').textContent = isPaid
+        ? 'Share your referral code. When a friend registers with it and pays, you get cashback. No limit on referrals.'
+        : 'Your referral code is ready — share it now. When a friend registers with it and pays, you earn ₹' + (amt || 100) + '. Your cashback is sent once your own payment is complete.';
       $('refWa').href = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program (2 weeks, certificate included). Use my referral code ' + code + ' when you register: ' + link);
       $('refCopy').onclick = function () {
         var done = function () { $('refCopy').textContent = 'Copied'; setTimeout(function () { $('refCopy').textContent = 'Copy link'; }, 1600); };
@@ -169,20 +190,24 @@
       $('refBox').hidden = false;
     }
 
-    function showPaid(mode) {
+    function showPaid(mode, d) {
+      paid = true;
       var demo = mode === 'test';   // paid with Razorpay test (demo) keys: no real money
       $('sPay').textContent = demo ? 'Demo paid' : 'Paid'; $('sPay').className = ''; $('sPay').style.color = demo ? '#C9B6FF' : 'var(--green)';
+      $('hardcopyWrap').hidden = true;
+      if (d && d.amountPaidInr) { $('bkTotalLabel').textContent = 'Total paid'; $('bkTotal').textContent = rupees(d.amountPaidInr); }
       setBusy(false, 'Payment complete'); btn.disabled = true;
+      var arrow = btn.querySelector('svg'); if (arrow) arrow.style.display = 'none';
       document.querySelectorAll('.stepper .st')[1].className = 'st done';
       document.querySelectorAll('.stepper .st b')[1].textContent = '✓';
-      $('payCard').querySelector('h1').textContent = 'Your seat is confirmed!';
-      $('payCard').querySelector('h1 + p').textContent = 'Welcome to the CodeBuzz AI Internship Program.';
-      var arrow = btn.querySelector('svg'); if (arrow) arrow.style.display = 'none';
-      say(demo ? 'Demo payment received (Razorpay test mode \u2014 no real money was charged). Log in to the student portal with your email to see your details.'
+      $('payTitle').textContent = 'Your seat is confirmed!';
+      $('payIntro').textContent = 'Welcome to the CodeBuzz AI Internship Program. We’ve emailed your payment receipt.';
+      $('termsNote').hidden = true;
+      $('laterArea').hidden = true;
+      if (d && d.dateMode === 'later') $('payIntro').textContent = 'Payment received. Next, choose your batch in the student portal.';
+      say(demo ? 'Demo payment received (Razorpay test mode — no real money was charged). Log in to the student portal with your email to see your details.'
                : 'Payment received. Log in to the student portal with your email to see your details anytime.');
-      $('refText').textContent = 'Share your referral code. When a friend registers with it and pays, you get cashback. No limit on referrals.';
       $('loginLink').hidden = false;
-      $('skipWrap').hidden = true;
     }
 
     function load() {
@@ -190,22 +215,30 @@
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function (d) {
           if (d.participantType === 'ambassador') { location.replace('login.html'); return d; }   // ambassadors don't pay
+          if (d.feeInr) PRICE.fee = d.feeInr;
+          if (d.hardcopyFeeInr) PRICE.hardcopy = d.hardcopyFeeInr;
           $('sName').textContent = d.name;
-          $('sPeriod').textContent = fmt(d.internshipFrom) + ' → ' + fmt(d.internshipTo);
-          if (d.feeInr) { feeInr = d.feeInr; $('sAmount').textContent = rupees(feeInr); }
+          var later = d.dateMode === 'later'; currentMode = d.dateMode;
+          $('sPeriod').textContent = later ? 'You’ll choose your batch in the portal'
+            : (d.batchNumber ? 'Batch ' + String(d.batchNumber).padStart(2, '0') + ' · ' : '') + fmt(d.internshipFrom) + ' → ' + fmt(d.internshipTo);
+          showReferral(d.referralCode, d.referralRewardInr, d.paymentDone === 'Yes');
+
+          $('payArea').hidden = false;
+          if (later && d.paymentDone !== 'Yes') {
+            // "Choose date later": pay now, or skip and pay from the portal (the batch is chosen there)
+            $('payIntro').textContent = 'Pay now to confirm your seat, or skip and pay later from your student portal. You\u2019ll choose your batch in the portal.';
+            var loggedIn = false; try { loggedIn = !!sessionStorage.getItem('cbi_student_token'); } catch (_) {}
+            $('skipBtn').href = loggedIn ? 'dashboard.html' : 'login.html?skip=1';
+            $('laterArea').hidden = false;
+          }
+          // Printed certificate: chosen at registration, or ticked in the portal (?hardcopy=1)
+          if (!paid) $('hardcopy').checked = params.get('hardcopy') === '1' || !!d.certificateHardcopy;
+          syncBreakup();
           var demoNeedsReal = d.paymentDone === 'Yes' && d.paymentMode === 'test' && d.paymentsLive;
-          showReferral(d.referralCode, d.referralRewardInr);   // everyone gets a code at registration
-          if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode); }
+          if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode, d); }
           else {
-            // Custom dates may pay later from the portal; scheduled batches must pay now
-            if (d.dateMode === 'custom') {
-              var loggedIn = false; try { loggedIn = !!sessionStorage.getItem('cbi_student_token'); } catch (_) {}
-              $('skipBtn').href = loggedIn ? 'dashboard.html' : 'login.html?skip=1';
-              $('skipWrap').hidden = false;
-            }
-            $('refText').textContent = 'Your referral code is ready \u2014 share it now. When a friend registers with it and pays, you earn \u20b9' + (d.referralRewardInr || 100) + '. Your cashback is sent once your own payment is complete.';
             setBusy(false);
-            if (demoNeedsReal) { $('sPay').textContent = 'Demo paid \u2014 real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
+            if (demoNeedsReal) { $('sPay').textContent = 'Demo paid — real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
           }
           return d;
         });
@@ -241,7 +274,7 @@
     }
 
     btn.addEventListener('click', function () {
-      if (busy) return;
+      if (busy || paid) return;
       if (!CFG.paymentsEnabled) {
         say('Online payment is being set up. We’ll email you the payment link shortly — your registration is saved.');
         return;
@@ -249,7 +282,7 @@
       setBusy(true, 'Opening secure checkout…');
       say('Pay securely with UPI, cards or net banking.');
 
-      Promise.all([post('/api/internship/payments/order', { registrationId: id }), loadCheckout()])
+      Promise.all([post('/api/internship/payments/order', { registrationId: id, certificateHardcopy: $('hardcopy').checked }), loadCheckout()])
         .then(function (res) {
           var r = res[0];
           if (r.status === 409) { showPaid(r.data.paymentMode); return; }
@@ -276,7 +309,11 @@
                   razorpay_payment_id: resp.razorpay_payment_id,
                   razorpay_signature: resp.razorpay_signature
                 }).then(function (v) {
-                  if (v.ok && v.data.paymentDone === 'Yes') { showPaid(v.data.paymentMode); load().catch(function () {}); if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid'); if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: feeInr, currency: 'INR', content_name: 'CodeBuzz AI Internship' }); }
+                  if (v.ok && v.data.paymentDone === 'Yes') {
+                    load().catch(function () {}); showPaid(v.data.paymentMode, { amountPaidInr: o.amount / 100, dateMode: currentMode });
+                    if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid');
+                    if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: o.amount / 100, currency: 'INR', content_name: 'CodeBuzz AI Internship' });
+                  }
                   else if (v.data.pending && tries > 0) { say(v.data.message || 'Confirming your payment…'); setTimeout(function () { verify(tries - 1); }, 4000); }
                   else if (v.status === 400) { setBusy(false); say(v.data.message || 'We could not verify this payment.', true); }
                   else waitForConfirmation(5);

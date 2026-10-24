@@ -80,6 +80,18 @@
               <div class="stat"><strong id="o-amb-joined">0</strong><span>Juniors paid (real)</span></div>
             </div>
           </div>
+          <div class="card">
+            <h2>How students found us</h2>
+            <div class="table-wrap" id="o-sources"></div>
+          </div>
+          <div class="card">
+            <h2>Certificate hard copies <button class="link-btn" type="button" id="o-hc-open" style="font-size:.85rem;font-weight:500">view list</button></h2>
+            <div class="stat-row">
+              <div class="stat"><strong id="o-hc">0</strong><span>To print &amp; courier (paid)</span></div>
+              <div class="stat"><strong id="o-hc-demo">0</strong><span>Demo paid</span></div>
+            </div>
+            <p class="muted" style="font-size:.82rem;margin-top:10px">Printed certificates go to each student's registered home address after they complete the program.</p>
+          </div>
           <div class="card wide">
             <h2>Referral cashback</h2>
             <div class="stat-row">
@@ -100,6 +112,8 @@
           <select class="ctrl" id="f-batch"><option value="">All batches</option></select>
           <select class="ctrl" id="f-pay"><option value="">Any payment</option><option value="Yes">Paid (real)</option><option value="Demo">Demo paid</option><option value="No">Not paid</option></select>
           <select class="ctrl" id="f-ref"><option value="">Any referral</option><option value="referred">Was referred</option><option value="referrer">Has referred others</option></select>
+          <select class="ctrl" id="f-src"><option value="">Any source</option><option value="ambassador">Student Ambassador</option><option value="student_referral">Friend / student referral</option><option value="pamphlet">Pamphlet / poster</option><option value="social_media">Social media</option><option value="ads">Online ad</option><option value="other">Other</option></select>
+          <select class="ctrl" id="f-hc"><option value="">Any certificate</option><option value="yes">Hard copy requested</option></select>
           <button class="btn btn-ghost btn-sm" id="csv-students" type="button">Export CSV</button>
         </div>
         <p class="muted" id="s-count" style="font-size:.85rem;margin-bottom:10px"></p>
@@ -233,8 +247,11 @@
 
     function isAmb(s) { return s.participantType === 'ambassador'; }
     var AMB_TAG = '<span class="tag amb">Ambassador</span>';
-    function groupKey(s) { return isAmb(s) ? 'ambassador' : (s.dateMode === 'custom' ? 'custom:' : 'batch:') + s.from; }
-    function groupLabel(g) { return g.label + ' · ' + P.date(g.from) + ' → ' + P.date(g.to); }
+    var SOURCES = { ambassador: 'Student Ambassador', student_referral: 'Friend / student referral', pamphlet: 'Pamphlet / poster',
+      social_media: 'Social media', ads: 'Online ad', other: 'Other', unknown: 'Not asked (older registrations)' };
+    function srcText(s) { return s.heardFrom ? (SOURCES[s.heardFrom] || s.heardFrom) + (s.heardFromOther ? ' \u2014 ' + s.heardFromOther : '') : '\u2014'; }
+    function groupKey(s) { return isAmb(s) ? 'ambassador' : s.dateMode === 'later' ? 'later' : (s.dateMode === 'custom' ? 'custom:' : 'batch:') + s.from; }
+    function groupLabel(g) { return g.dateMode === 'later' ? g.label : g.label + ' · ' + P.date(g.from) + ' → ' + P.date(g.to); }
 
     function renderOverview() {
       var o = state.overview;
@@ -250,9 +267,15 @@
       $('o-r-earned').textContent = o.referrals.earned.count + ' · ' + P.inr(o.referrals.earned.amountInr);
       $('o-r-paid').textContent = o.referrals.paid.count + ' · ' + P.inr(o.referrals.paid.amountInr);
       $('o-r-cancel').textContent = (o.referrals.demo ? o.referrals.demo.count : 0) + ' \u00b7 ' + o.referrals.cancelled.count;
+      $('o-hc').textContent = o.hardcopies ? o.hardcopies.paid : 0;
+      $('o-hc-demo').textContent = o.hardcopies ? o.hardcopies.demo : 0;
+      $('o-sources').innerHTML = (o.sources || []).length
+        ? '<table class="tbl"><thead><tr><th>Source</th><th class="num">Registered</th><th class="num">Paid (real)</th></tr></thead><tbody>' +
+          o.sources.map(function (x) { return '<tr><td>' + e(SOURCES[x.source] || x.source) + '</td><td class="num">' + x.registered + '</td><td class="num">' + x.paid + '</td></tr>'; }).join('') + '</tbody></table>'
+        : '<div class="empty">No students yet.</div>';
       $('o-batches').innerHTML = o.groups.map(function (g) {
         return '<button class="batch-tile" type="button" data-key="' + e(g.key) + '"><small>' + e(g.label) + '</small>' +
-          '<div class="dates">' + P.date(g.from) + ' → ' + P.date(g.to) + '</div>' +
+          '<div class="dates">' + (g.dateMode === 'later' ? 'Will pick a batch in the portal' : P.date(g.from) + ' → ' + P.date(g.to)) + '</div>' +
           '<div class="nums"><span><b>' + g.registered + '</b> registered</span><span><b>' + g.paid + '</b> paid</span>' + (g.demoPaid ? '<span><b>' + g.demoPaid + '</b> demo</span>' : '') + '</div>' +
           '<div class="muted" style="font-size:.8rem;margin-top:8px">' + P.inr(g.revenueInr) + ' collected</div></button>';
       }).join('') || '<div class="empty">No batches yet.</div>';
@@ -261,6 +284,7 @@
       });
     }
 
+    $('o-hc-open').addEventListener('click', function () { $('f-type').value = 'student'; $('f-hc').value = 'yes'; $('f-batch').value = ''; renderStudents(); tab('students'); });
     $('o-amb-open').addEventListener('click', function () { $('f-type').value = 'ambassador'; $('f-batch').value = ''; renderStudents(); tab('students'); });
 
     function fillBatchFilter() {
@@ -282,15 +306,18 @@
         if (pay === 'No' && payState(s) !== 'none') return false;
         if (rf === 'referred' && !s.referredBy) return false;
         if (rf === 'referrer' && !s.referredTotal) return false;
+        var src = $('f-src').value, hcf = $('f-hc').value;
+        if (src && s.heardFrom !== src) return false;
+        if (hcf === 'yes' && !s.certificateHardcopy) return false;
         if (q) {
-          var hay = [s.registrationId, s.fullName, s.email, s.phone, s.college, s.referralCode, s.referredBy && s.referredBy.name, s.referredBy && s.referredBy.code].join(' ').toLowerCase();
+          var hay = [s.registrationId, s.fullName, s.email, s.phone, s.college, s.referralCode, s.heardFromOther, s.referredBy && s.referredBy.name, s.referredBy && s.referredBy.code].join(' ').toLowerCase();
           if (hay.indexOf(q) < 0) return false;
         }
         return true;
       });
     }
 
-    function batchText(s) { return s.dateMode === 'custom' ? 'Custom' : (s.batchNumber ? 'Batch ' + String(s.batchNumber).padStart(2, '0') : 'Batch'); }
+    function batchText(s) { return s.dateMode === 'later' ? 'Choose later' : s.dateMode === 'custom' ? 'Custom' : (s.batchNumber ? 'Batch ' + String(s.batchNumber).padStart(2, '0') : 'Batch'); }
 
     function renderStudents() {
       var list = filteredStudents();
@@ -310,15 +337,15 @@
           return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="mono">' + e(s.registrationId) + '</td>' +
             '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
             '<td>' + e(s.college) + '<br><span class="muted" style="font-size:.8rem">' + e(s.degree) + ' · Yr ' + s.collegeYear + '</span></td>' +
-            '<td>' + batchText(s) + '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span></td>' +
-            '<td>' + payTag(s, true) + '</td>' +
+            '<td>' + batchText(s) + (s.from ? '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span>' : '') + '</td>' +
+            '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') + '</td>' +
             '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
             '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
             '<td class="num">' + (s.cashbackDueInr ? P.inr(s.cashbackDueInr) : '<span class="muted">—</span>') + '</td></tr>';
         }).join('') + '</tbody></table>';
       $('s-table').querySelectorAll('tr[data-id]').forEach(function (tr) { tr.addEventListener('click', function () { openStudent(tr.dataset.id); }); });
     }
-    ['q', 'f-type', 'f-batch', 'f-pay', 'f-ref'].forEach(function (id) { $(id).addEventListener('input', renderStudents); });
+    ['q', 'f-type', 'f-batch', 'f-pay', 'f-ref', 'f-src', 'f-hc'].forEach(function (id) { $(id).addEventListener('input', renderStudents); });
 
     var RSTAT = { pending: ['Pending', 'amber'], earned: ['Earned — to pay', 'blue'], paid: ['Paid out', 'green'], cancelled: ['Cancelled', 'red'] };
     function filteredRewards() {
@@ -427,7 +454,8 @@
         dateMode: s.dateMode, internshipFrom: s.from };
     }
     function showValue(k, v) {
-      if (k === 'dateMode') return v === 'custom' ? 'Custom dates' : 'Scheduled batch';
+      if (k === 'dateMode') return v === 'custom' ? 'Custom dates' : v === 'later' ? 'Choose date later' : 'Scheduled batch';
+      if (k === 'internshipFrom' && !v) return '\u2014';
       if (k === 'dateOfBirth' || k === 'internshipFrom') return P.date(v);
       if (k === 'collegeYear') return v + ' year';
       return v;
@@ -484,21 +512,21 @@
         fld('degree', 'Degree', '<input class="ctrl" id="ed-degree" maxlength="80" value="' + e(v.degree) + '">') +
         fld('course', 'Course / branch', '<input class="ctrl" id="ed-course" maxlength="120" value="' + e(v.course) + '">') +
         fld('collegeYear', 'College year', '<select class="ctrl" id="ed-collegeYear">' + [1, 2, 3, 4, 5].map(function (y) { return '<option value="' + y + '"' + (String(y) === v.collegeYear ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>') +
-        fld('dateMode', 'Internship type', '<select class="ctrl" id="ed-dateMode"><option value="scheduled"' + (v.dateMode !== 'custom' ? ' selected' : '') + '>Scheduled batch</option><option value="custom"' + (v.dateMode === 'custom' ? ' selected' : '') + '>Custom dates</option></select>') +
+        fld('dateMode', 'Internship dates', '<select class="ctrl" id="ed-dateMode"><option value="scheduled"' + (v.dateMode === 'scheduled' ? ' selected' : '') + '>Scheduled batch</option><option value="later"' + (v.dateMode === 'later' ? ' selected' : '') + '>Choose date later (student picks in portal)</option>' + (v.dateMode === 'custom' ? '<option value="custom" selected>Custom dates (older registration)</option>' : '') + '</select>') +
         '<div class="field full" id="wrap-batch">' + '<label for="ed-batch">Batch</label><select class="ctrl" id="ed-batch">' + (BATCHES.indexOf(v.internshipFrom) < 0 ? '<option value="">Select a batch</option>' : '') + batchOpts + '</select></div>' +
         '<div class="field full" id="wrap-custom"><label for="ed-custom">Start date (ends 2 weeks later)</label><input class="ctrl" id="ed-custom" type="date" value="' + e(v.internshipFrom) + '"></div>' +
         fld('homeAddress', 'Address', '<textarea class="ctrl" id="ed-homeAddress" maxlength="500">' + e(v.homeAddress) + '</textarea>', true) +
         '</div><div class="drawer-actions"><button class="btn btn-primary btn-sm" type="submit">Review changes</button><button class="btn btn-ghost btn-sm" type="button" id="ed-cancel">Cancel</button></div></form>' +
         '<div class="msg" id="m-edit" role="alert"></div>';
-      function syncMode() { var c = $('ed-dateMode').value === 'custom'; $('wrap-batch').hidden = c; $('wrap-custom').hidden = !c; }
+      function syncMode() { var m = $('ed-dateMode').value; $('wrap-batch').hidden = m !== 'scheduled'; $('wrap-custom').hidden = m !== 'custom'; }
       $('ed-dateMode').addEventListener('change', syncMode); syncMode();
       $('ed-cancel').addEventListener('click', function () { openStudent(s.registrationId); });
       $('f-edit').addEventListener('submit', function (ev) {
         ev.preventDefault();
         var nv = {};
         EDIT_FIELDS.forEach(function (f) { var el = $('ed-' + f[0]); if (el) nv[f[0]] = el.value.trim(); });
-        nv.internshipFrom = nv.dateMode === 'custom' ? $('ed-custom').value : $('ed-batch').value;
-        if (!nv.internshipFrom) return P.msg($('m-edit'), nv.dateMode === 'custom' ? 'Choose a start date.' : 'Choose a batch.');
+        nv.internshipFrom = nv.dateMode === 'later' ? '' : nv.dateMode === 'custom' ? $('ed-custom').value : $('ed-batch').value;
+        if (!nv.internshipFrom && nv.dateMode !== 'later') return P.msg($('m-edit'), nv.dateMode === 'custom' ? 'Choose a start date.' : 'Choose a batch.');
         var changes = EDIT_FIELDS.filter(function (f) { return String(nv[f[0]]) !== String(v[f[0]]); });
         if (!changes.length) return P.msg($('m-edit'), 'Nothing has changed.', 'ok');
         confirmBox({
@@ -576,7 +604,10 @@
           '<div class="drawer-actions"><button class="btn btn-ghost btn-sm" type="button" id="btnEdit">Edit details</button>' +
           '<button class="btn btn-danger btn-sm" type="button" id="btnDelete">Delete student</button></div>' +
           '<h3>Internship</h3>' + kv([
-            ['Type', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)], ['Dates', P.date(s.from) + ' → ' + P.date(s.to)]
+            ['Batch', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)],
+            ['Dates', s.from ? P.date(s.from) + ' → ' + P.date(s.to) : 'Not chosen yet'],
+            s.batchChosenAt ? ['Batch chosen in portal', P.date(s.batchChosenAt)] : null,
+            ['Certificate', s.certificateHardcopy ? 'Digital + printed hard copy (courier to home address)' : 'Digital']
           ]) +
           '<h3>Payment</h3>' + kv([
             ['Status', payTag(s, false) + (payState(s) === 'demo' ? ' <span class="muted" style="font-size:.8rem">Razorpay test mode \u2014 no real money</span>' : ''), true],
@@ -601,7 +632,8 @@
             }).join('') + '</tbody></table></div>' : '') +
           '<h3>Student details</h3>' + kv([
             ['Father’s name', s.fatherName], ['Date of birth', P.date(s.dateOfBirth)], ['Email', s.email], ['Mobile', '+91 ' + s.phone],
-            ['Degree', s.degree + ' · ' + s.course], ['Year', String(s.collegeYear)], ['Address', s.homeAddress], ['Registered', P.date(s.registeredAt)]
+            ['Degree', s.degree + ' · ' + s.course], ['Year', String(s.collegeYear)], ['Address', s.homeAddress], ['Registered', P.date(s.registeredAt)],
+            ['Heard about us', srcText(s)]
           ]) +
           '<h3>Student login</h3>' + kv([
             ['Activated', s.loginActivated], s.lastLoginAt ? ['Last login', P.date(s.lastLoginAt)] : null
@@ -674,9 +706,9 @@
       a.download = name; document.body.appendChild(a); a.click(); a.remove();
     }
     $('csv-students').addEventListener('click', function () {
-      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at']];
+      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at', 'Certificate hard copy', 'Heard from', 'Heard from (other)', 'Batch chosen at']];
       filteredStudents().forEach(function (s) {
-        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt]);
+        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt, s.certificateHardcopy ? 'Yes' : 'No', SOURCES[s.heardFrom] || s.heardFrom, s.heardFromOther, s.batchChosenAt]);
       });
       download('internship-students.csv', csv(rows));
     });

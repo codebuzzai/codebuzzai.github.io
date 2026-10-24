@@ -33,7 +33,6 @@
 
   var form = $('regForm'), degree = $('degree'), course = $('course'), year = $('year');
   var degreeOther = $('degreeOther'), courseOther = $('courseOther');
-  var fromDate = $('fromDate'), toDate = $('toDate');
   var today = new Date(); today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   /* ---------- Degree dropdown ---------- */
@@ -85,15 +84,9 @@
   dob.max = toISO(new Date(today.getFullYear() - 15, today.getMonth(), today.getDate()));
   dob.min = toISO(new Date(today.getFullYear() - 60, today.getMonth(), today.getDate()));
 
-  /* ---------- Internship period: scheduled batch or custom dates ---------- */
+  /* ---------- Internship dates: a batch now, or "choose date later" (picked in the portal) ---------- */
   var DAYS = CFG.internshipDays || 14;
   var batch = $('batch');
-  var customConsent = $('customConsent');
-
-  // Custom dates: start from tomorrow, and the 2 weeks must end by customLastDay (24 Jan 2027)
-  var lastDay = fromISO(CFG.customLastDay || '2027-01-24');
-  fromDate.min = toISO(addDays(today, 1));
-  fromDate.max = toISO(addDays(lastDay, -(DAYS - 1)));
 
   // Scheduled batches that haven't started yet
   batch.appendChild(opt('', 'Select a batch'));
@@ -105,38 +98,66 @@
   });
 
   function mode() { return form.querySelector('input[name="dateMode"]:checked').value; }
-  function startValue() { return mode() === 'custom' ? fromDate.value : batch.value; }
+  function startValue() { return mode() === 'later' ? '' : batch.value; }
 
   function syncPeriod() {
     var s = startValue();
-    if (!s) { toDate.value = ''; $('periodNote').hidden = true; return; }
+    if (!s) { $('periodNote').hidden = true; return; }
     var start = fromISO(s), end = addDays(start, DAYS - 1);
-    toDate.value = toISO(end);
-    toDate.min = toDate.max = toISO(end);
     $('periodText').textContent = 'Your internship: ' + nice(start) + ' → ' + nice(end) + ' (2 weeks)';
     $('periodNote').hidden = false;
   }
 
+  /* ---------- Certificate hard copy + fee breakup ---------- */
+  var PRICE = { fee: CFG.feeInr || 1999, hardcopy: CFG.hardcopyFeeInr || 150 };
+  var hardcopy = $('hardcopy');
+  function rs(n) { return '\u20b9' + Number(n).toLocaleString('en-IN'); }
+  function syncBreakup() {
+    var later = mode() === 'later';
+    document.querySelectorAll('[data-hardcopy-fee]').forEach(function (e) { e.textContent = PRICE.hardcopy; });
+    var hc = hardcopy.checked;
+    $('bkFee').textContent = rs(PRICE.fee);
+    $('bkHc').textContent = rs(PRICE.hardcopy);
+    $('bkHcRow').hidden = !hc;
+    $('bkTotal').textContent = rs(PRICE.fee + (hc ? PRICE.hardcopy : 0));
+    $('bkNote').textContent = later
+      ? 'On the next page you can pay now, or skip and pay later from your student portal. The internship fee is non-refundable.'
+      : 'You\u2019ll pay on the next page. The internship fee is non-refundable.';
+  }
+  hardcopy.addEventListener('change', syncBreakup);
+  // Prices come from the server; config.js values are only a fallback
+  fetch(CFG.apiBase + '/api/internship/pricing').then(function (r) { return r.json(); }).then(function (d) {
+    if (d.feeInr) PRICE.fee = d.feeInr;
+    if (d.hardcopyFeeInr) PRICE.hardcopy = d.hardcopyFeeInr;
+    syncBreakup();
+  }).catch(function () {});
+
   function syncMode() {
-    var custom = mode() === 'custom';
-    showWrap('scheduledWrap', !custom);
-    showWrap('customWrap', custom);
-    $('customConsentWrap').hidden = !custom;
-    if (!custom) { customConsent.checked = false; $('customConsentWrap').classList.remove('invalid'); }
-    clearErr(batch); clearErr(fromDate);
+    var later = mode() === 'later';
+    showWrap('scheduledWrap', !later);
+    $('laterNote').hidden = !later;
+    clearErr(batch);
     syncPeriod();
+    syncBreakup();
+    $('nextHint').textContent = later ? 'Next: pay now or skip for later' : 'Next: payment';
   }
 
   form.querySelectorAll('input[name="dateMode"]').forEach(function (r) { r.addEventListener('change', syncMode); });
   batch.addEventListener('change', syncPeriod);
-  fromDate.addEventListener('change', syncPeriod);
-  fromDate.addEventListener('input', syncPeriod);
+
+  /* ---------- How did you hear about us ---------- */
+  var heardFrom = $('heardFrom');
+  heardFrom.addEventListener('change', function () {
+    showWrap('heardOtherWrap', heardFrom.value === 'other');
+    if (heardFrom.value !== 'other') $('heardFromOther').value = '';
+  });
 
   // Pre-select the batch chosen on the landing page (register.html?start=YYYY-MM-DD)
   var startParam = new URLSearchParams(location.search).get('start');
   var picked = startParam && batch.querySelector('option[value="' + startParam.replace(/[^\d-]/g, '') + '"]');
   if (picked && !picked.disabled) batch.value = startParam;
-  syncMode(); // also restores the right view if the browser kept "Custom dates" checked on back/refresh
+  if (new URLSearchParams(location.search).get('dates') === 'later') form.querySelector('input[name="dateMode"][value="later"]').checked = true;
+  syncMode(); // also restores the right view if the browser kept "Choose date later" checked on back/refresh
   // (the Student / Ambassador view is applied further down, once validation helpers exist)
 
   /* ---------- Phone: digits only ---------- */
@@ -175,7 +196,7 @@
   var TEXT = {
     student: {
       title: 'Register for the <span class="grad">internship</span>',
-      intro: 'Fill in your details below. All fields are mandatory. It takes about two minutes.',
+      intro: 'Fill in your details below. Fields marked * are mandatory. It takes about two minutes.',
       step2: 'Payment', step3: 'Student login', submit: 'Register now', next: 'Next: payment',
       consent: 'I confirm that the details above are correct, and I agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--brand)">Terms &amp; Conditions</a>, including that the internship fee is non-refundable.'
     },
@@ -195,7 +216,7 @@
     $('step2').textContent = t.step2; $('step3').textContent = t.step3;
     $('submitLabel').textContent = t.submit; $('nextHint').textContent = t.next; $('consentText').innerHTML = t.consent;
     $('fullName').placeholder = amb ? 'Your full name' : 'As on your college ID';
-    if (amb) { $('customConsentWrap').hidden = true; } else { syncMode(); }
+    if (!amb) syncMode();
     form.querySelectorAll('.field.invalid').forEach(function (f) { f.classList.remove('invalid'); });
     $('formError').classList.remove('show');
   }
@@ -229,8 +250,8 @@
     year:        function () { return !!year.value; },
     address:     function () { return clean($('address').value).length >= 10; },
     referralCode: function () { var v = refInput.value.trim(); return !v || REF_RE.test(v.toUpperCase()); },
-    batch:       function () { return mode() === 'custom' || (!!batch.value && !batch.selectedOptions[0].disabled); },
-    fromDate:    function () { return mode() !== 'custom' || inRange(fromDate.value, fromDate.min, fromDate.max); }
+    batch:       function () { return mode() === 'later' || (!!batch.value && !batch.selectedOptions[0].disabled); },
+    heardFrom:   function () { return !!heardFrom.value; }
   };
 
   function activeChecks() { return Object.keys(checks).filter(function (id) { return !isAmb() || COMMON.indexOf(id) >= 0; }); }
@@ -245,7 +266,6 @@
 
   var consent = $('consent');
   consent.addEventListener('change', function () { $('consentWrap').classList.toggle('invalid', !consent.checked); });
-  customConsent.addEventListener('change', function () { $('customConsentWrap').classList.toggle('invalid', !customConsent.checked); });
 
   // Hide the summary error once every highlighted field has been fixed
   form.addEventListener('input', hideErrorIfClean);
@@ -298,7 +318,6 @@
       ok = ok && good;
     });
     if (!consent.checked) { $('consentWrap').classList.add('invalid'); ok = false; if (!first) first = consent; }
-    if (!amb && mode() === 'custom' && !customConsent.checked) { $('customConsentWrap').classList.add('invalid'); ok = false; if (!first) first = customConsent; }
     if (!ok) {
       showError('Please fix the highlighted fields.');
       if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { first.focus({ preventScroll: true }); }, 400); }
@@ -327,10 +346,11 @@
       collegeYear:    +year.value,
       homeAddress:    $('address').value.trim(),
       internshipFrom: startValue(),
-      internshipTo:   toDate.value,
       dateMode:       mode(),
+      certificateHardcopy: hardcopy.checked,
       referralCode:   refInput.value.trim().toUpperCase(),
-      customDatesConsent: mode() === 'custom',
+      heardFrom:      heardFrom.value,
+      heardFromOther: heardFrom.value === 'other' ? clean($('heardFromOther').value) : '',
       consent:        true
     };
 

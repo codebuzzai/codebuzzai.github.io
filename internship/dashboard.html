@@ -60,6 +60,28 @@
         </div>
 
         <!-- Referral code -->
+        <!-- "Choose date later": pick a batch -->
+        <div class="card wide choose-card" id="chooseCard" hidden>
+          <h2>Choose your batch <span class="tag blue">Step 1 of 2</span></h2>
+          <p class="muted">Pick any upcoming batch. Each runs Monday to Sunday of the following week (2 weeks). After you confirm, you'll pay to secure your seat.</p>
+          <div class="choose-grid" id="chooseGrid"></div>
+          <label class="addon" id="chHardcopyWrap">
+            <input type="checkbox" id="chHardcopy" />
+            <span>
+              <strong>Add a printed certificate <b class="addon-price">+&#8377;<span id="chHcFee">150</span></b></strong>
+              <small>Couriered to your home address after you complete the program. Courier charges included. Optional.</small>
+            </span>
+          </label>
+          <div class="breakup" style="margin-top:16px">
+            <h3>Fee summary</h3>
+            <div class="bk-row"><span>Internship fee</span><b id="chFee">&#8377;1,999</b></div>
+            <div class="bk-row" id="chHcRow" hidden><span>Certificate hard copy <small>(incl. courier)</small></span><b id="chHc">&#8377;150</b></div>
+            <div class="bk-row bk-total"><span>Total</span><b id="chTotal">&#8377;1,999</b></div>
+          </div>
+          <button class="btn btn-primary" type="button" id="chConfirm" disabled>Confirm batch</button>
+          <div class="msg" id="m-choose" role="alert"></div>
+        </div>
+
         <div class="card wide" id="refCard"></div>
 
         <div class="card" id="internCard">
@@ -114,6 +136,17 @@
       </div>
     </div>
   </main>
+
+  <!-- Confirmation before fixing the batch -->
+  <div class="modal" id="chModal" role="dialog" aria-modal="true" aria-labelledby="chModalTitle">
+    <div class="auth-card confirm-card">
+      <h1 id="chModalTitle">Confirm your batch?</h1>
+      <div class="sub" id="chModalBody"></div>
+      <button class="btn btn-primary" type="button" id="chModalOk">Yes, confirm &amp; continue to payment</button>
+      <button class="btn btn-ghost" type="button" id="chModalCancel" style="margin-top:10px">Go back</button>
+      <div class="msg" id="m-chmodal" role="alert"></div>
+    </div>
+  </div>
 
   <footer class="footer" style="margin-top:60px">
     <div class="container">
@@ -181,6 +214,63 @@
       }
     }
 
+    // "Choose date later": pick a batch, confirm it in a popup, then go to payment
+    function showChooser(i, p, s) {
+      var chosen = '', fee = p.feeInr, hc = p.hardcopyFeeInr || 150;
+      var paidAlready = p.paymentDone === 'Yes';
+      $('chooseCard').hidden = false;
+      if (paidAlready) {
+        // Already paid: just pick the batch
+        $('chHardcopyWrap').hidden = true;
+        $('chooseCard').querySelector('.breakup').hidden = true;
+        $('chooseCard').querySelector('.tag').textContent = 'Paid \u2014 choose your dates';
+        $('chModalOk').textContent = 'Yes, confirm my batch';
+      }
+      $('chHcFee').textContent = hc;
+      function sync() {
+        var on = $('chHardcopy').checked;
+        $('chFee').textContent = P.inr(fee); $('chHc').textContent = P.inr(hc);
+        $('chHcRow').hidden = !on; $('chTotal').textContent = P.inr(fee + (on ? hc : 0));
+      }
+      $('chHardcopy').checked = !!(p.price && p.price.certificateHardcopy);   // remember the choice made at registration
+      $('chHardcopy').addEventListener('change', sync); sync();
+      if (!i.openBatches.length) {
+        $('chooseGrid').innerHTML = '<div class="empty">No batches are open right now. Write to info@codebuzz.ai and we\u2019ll help you.</div>';
+        return;
+      }
+      $('chooseGrid').innerHTML = i.openBatches.map(function (b) {
+        return '<label class="choose-opt"><input type="radio" name="chBatch" value="' + e(b.start) + '" data-no="' + b.number + '" data-end="' + e(b.end) + '">' +
+          '<small>Batch ' + String(b.number).padStart(2, '0') + '</small><b>' + P.date(b.start) + ' \u2192 ' + P.date(b.end) + '</b></label>';
+      }).join('');
+      $('chooseGrid').querySelectorAll('input').forEach(function (r) {
+        r.addEventListener('change', function () { chosen = r.value; $('chConfirm').disabled = false; P.msg($('m-choose'), ''); });
+      });
+      $('chConfirm').addEventListener('click', function () {
+        var r = $('chooseGrid').querySelector('input:checked');
+        if (!r) return P.msg($('m-choose'), 'Pick a batch first.');
+        var on = $('chHardcopy').checked;
+        $('chModalBody').innerHTML =
+          '<div class="change-list"><div><span>Batch</span><p><b>Batch ' + String(r.dataset.no).padStart(2, '0') + '</b><br>' + P.date(r.value) + ' \u2192 ' + P.date(r.dataset.end) + '</p></div>' +
+          (paidAlready ? '</div>' :
+          '<div><span>Certificate</span><p>' + (on ? 'Digital + printed hard copy' : 'Digital') + '</p></div>' +
+          '<div><span>To pay</span><p><b>' + P.inr(fee + (on ? hc : 0)) + '</b></p></div></div>') +
+          '<div class="warn-note" style="margin-top:14px"><span>Please check the dates. <b>Once confirmed, your batch can\u2019t be changed here</b> \u2014 write to info@codebuzz.ai if you need help. The internship fee is non-refundable.</span></div>';
+        P.msg($('m-chmodal'), '');
+        $('chModal').classList.add('open');
+      });
+      $('chModalCancel').addEventListener('click', function () { $('chModal').classList.remove('open'); });
+      $('chModalOk').addEventListener('click', function () {
+        var btn = this;
+        P.busy(btn, true, 'Confirming\u2026');
+        P.api('/student/choose-batch', { body: { internshipFrom: chosen, confirm: true }, auth: 'student' }).then(function (r) {
+          P.busy(btn, false);
+          if (!r.ok) return P.msg($('m-chmodal'), r.data.message || 'Could not confirm the batch.');
+          if (paidAlready) { location.reload(); return; }
+          location.href = 'payment.html?id=' + encodeURIComponent(s.registrationId) + '&hardcopy=' + ($('chHardcopy').checked ? '1' : '0');
+        });
+      });
+    }
+
     P.api('/student/me', { auth: 'student' }).then(function (r) {
       // Scheduled batch, not paid yet → payment first
       if (r.status === 402 && r.data.paymentRequired) { location.replace('payment.html?id=' + encodeURIComponent(r.data.registrationId)); return; }
@@ -219,20 +309,24 @@
       $('st-pay').style.color = p.paymentDone !== 'Yes' ? '#FEBC2E' : (demo ? '#C9B6FF' : 'var(--green)');
 
       // Internship
-      tag($('intern-tag'), st[0], st[1]);
+      var later = i.dateMode === 'later';
+      if (later) { tag($('intern-tag'), 'Choose your batch', 'blue'); $('st-intern').textContent = 'Pick a batch'; showChooser(i, p, s); }
+      else tag($('intern-tag'), st[0], st[1]);
       kv($('intern'), [
         ['Program', 'CodeBuzz AI Internship Program'],
-        ['Type', i.dateMode === 'custom' ? 'Custom dates' : 'Scheduled batch' + (i.batchNumber ? ' · Batch ' + String(i.batchNumber).padStart(2, '0') : '')],
-        ['From', P.date(i.from)],
-        ['To', P.date(i.to)],
+        ['Batch', later ? 'Not chosen yet' : i.dateMode === 'custom' ? 'Custom dates' : (i.batchNumber ? 'Batch ' + String(i.batchNumber).padStart(2, '0') : 'Scheduled batch')],
+        later ? null : ['From', P.date(i.from)],
+        later ? null : ['To', P.date(i.to)],
         ['Duration', '2 weeks'],
-        i.dateMode === 'custom' ? ['Note', 'Custom dates need at least 10 students from your college. Otherwise you’ll be moved to the nearest scheduled batch.'] : null
+        ['Location', 'Chennai'],
+        ['Certificate', p.price && p.price.certificateHardcopy ? 'Digital + printed hard copy (courier)' : 'Digital']
       ]);
 
       // Payment
       tag($('pay-tag'), payText, p.paymentDone !== 'Yes' ? 'amber' : (demo ? 'violet' : 'green'));
       kv($('pay'), [
-        ['Fee', P.inr(p.feeInr)],
+        ['Internship fee', P.inr(p.feeInr)],
+        p.price && p.price.certificateHardcopy ? ['Certificate hard copy', P.inr(p.price.hardcopyInr)] : null,
         ['Status', p.paymentDone !== 'Yes' ? 'Not paid yet' : (demo ? 'Demo paid (Razorpay test mode)' : 'Paid')],
         p.paymentDone === 'Yes' ? ['Amount paid', P.inr(p.amountPaidInr)] : null,
         p.paymentId ? ['Payment ID', '<span class="mono">' + e(p.paymentId) + '</span>', true] : null,
@@ -243,7 +337,7 @@
         $('pay-action').innerHTML = '<div class="demo-note">This was a <b>demo payment</b> made in Razorpay test mode \u2014 no real money was charged.' +
           (p.paymentsLive ? '</div><a class="btn btn-primary" style="margin-top:14px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Complete real payment \u00b7 ' + P.inr(p.feeInr) + '</a>' : ' Your seat is confirmed once a real payment is made.</div>');
       } else if (p.paymentDone !== 'Yes') {
-        $('pay-action').innerHTML = '<a class="btn btn-primary" style="margin-top:18px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Pay ' + P.inr(p.feeInr) + '</a>';
+        $('pay-action').innerHTML = '<a class="btn btn-primary" style="margin-top:18px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Pay ' + P.inr(p.price ? p.price.totalInr : p.feeInr) + '</a>';
       }
 
       // Referred by
