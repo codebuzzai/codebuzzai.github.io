@@ -320,7 +320,11 @@
         p.paidAt ? ['Paid on', P.date(p.paidAt)] : null,
         ['Attempts', String(p.attempts.length)]
       ]);
-      if (demo) {
+      var soon = '<button class="btn btn-primary" style="margin-top:18px" type="button" disabled>Pay now \u00b7 coming soon</button>' +
+        '<p class="pay-note"><span class="pay-soon">Soon payment gateway will be enabled. Your registration is saved \u2014 we\u2019ll email you as soon as you can pay.</span></p>';
+      if (!(window.CB_INTERNSHIP || {}).paymentsEnabled && (p.paymentDone !== 'Yes' || (demo && p.paymentsLive))) {
+        $('pay-action').innerHTML = soon;
+      } else if (demo) {
         $('pay-action').innerHTML = '<div class="demo-note">This was a <b>demo payment</b> made in Razorpay test mode \u2014 no real money was charged.' +
           (p.paymentsLive ? '</div><a class="btn btn-primary" style="margin-top:14px" href="payment.html?id=' + encodeURIComponent(s.registrationId) + '">Complete real payment \u00b7 ' + P.inr(p.feeInr) + '</a>' : ' Your seat is confirmed once a real payment is made.</div>');
       } else if (p.paymentDone !== 'Yes') {

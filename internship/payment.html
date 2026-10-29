@@ -147,9 +147,17 @@
     function rupees(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
     function total() { return PRICE.fee + ($('hardcopy').checked ? PRICE.hardcopy : 0); }
     function say(msg, isError) { note.textContent = msg; note.className = 'pay-note' + (isError ? ' pay-error' : ''); }
+    var GATEWAY_OFF = !CFG.paymentsEnabled;   // payment gateway not live yet: show the button disabled
     function setBusy(on, label) {
-      busy = on; btn.disabled = on; btn.classList.toggle('loading', on);
-      $('payLabel').textContent = label || 'Pay ' + rupees(total());
+      busy = on; btn.disabled = on || (GATEWAY_OFF && !paid); btn.classList.toggle('loading', on);
+      $('payLabel').textContent = label || (GATEWAY_OFF && !paid ? 'Pay now \u00b7 coming soon' : 'Pay ' + rupees(total()));
+    }
+    function gatewaySoon() {
+      setBusy(false);
+      note.innerHTML = '<span class="pay-soon">payment window will be enabled from Nov 1st onwards. Your registration is saved \u2014 we\u2019ll email you as soon as you can pay.</span>';
+      note.className = 'pay-note';
+      var arrow = btn.querySelector('svg'); if (arrow) arrow.style.display = 'none';
+      $('termsNote').hidden = true;
     }
     function syncBreakup() {
       var hc = $('hardcopy').checked;
@@ -158,7 +166,7 @@
       $('bkHc').textContent = rupees(PRICE.hardcopy);
       $('bkHcRow').hidden = !hc;
       $('bkTotal').textContent = rupees(total());
-      if (!busy && !paid) $('payLabel').textContent = 'Pay ' + rupees(total());
+      if (!busy && !paid) $('payLabel').textContent = GATEWAY_OFF ? 'Pay now \u00b7 coming soon' : 'Pay ' + rupees(total());
     }
     $('hardcopy').addEventListener('change', syncBreakup);
     function post(path, body) {
@@ -226,7 +234,9 @@
           $('payArea').hidden = false;
           if (later && d.paymentDone !== 'Yes') {
             // "Choose date later": pay now, or skip and pay from the portal (the batch is chosen there)
-            $('payIntro').textContent = 'Pay now to confirm your seat, or skip and pay later from your student portal. You\u2019ll choose your batch in the portal.';
+            $('payIntro').textContent = GATEWAY_OFF
+              ? 'Online payment opens soon. Skip for now \u2014 you can pay later from your student portal and choose your batch there.'
+              : 'Pay now to confirm your seat, or skip and pay later from your student portal. You\u2019ll choose your batch in the portal.';
             var loggedIn = false; try { loggedIn = !!sessionStorage.getItem('cbi_student_token'); } catch (_) {}
             $('skipBtn').href = loggedIn ? 'dashboard.html' : 'login.html?skip=1';
             $('laterArea').hidden = false;
@@ -238,7 +248,8 @@
           if (d.paymentDone === 'Yes' && !demoNeedsReal) { showPaid(d.paymentMode, d); }
           else {
             setBusy(false);
-            if (demoNeedsReal) { $('sPay').textContent = 'Demo paid — real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
+            if (GATEWAY_OFF) { gatewaySoon(); if (!later) $('payIntro').textContent = 'Your registration is saved. Online payment opens soon \u2014 your seat is confirmed once you pay.'; }
+            else if (demoNeedsReal) { $('sPay').textContent = 'Demo paid — real payment pending'; say('Your earlier payment was a demo (test mode). Complete the real payment to confirm your seat.'); }
           }
           return d;
         });
@@ -294,10 +305,7 @@
 
     btn.addEventListener('click', function () {
       if (busy || paid) return;
-      if (!CFG.paymentsEnabled) {
-        say('Online payment is being set up. We’ll email you the payment link shortly — your registration is saved.');
-        return;
-      }
+      if (GATEWAY_OFF) { gatewaySoon(); return; }
       setBusy(true, 'Opening secure checkout…');
       say('Pay securely with UPI, cards or net banking.');
 

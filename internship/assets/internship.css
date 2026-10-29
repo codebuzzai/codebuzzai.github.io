@@ -939,3 +939,7 @@ section:has(> .legal) { padding-bottom: 80px; }
 @media (max-width: 1200px) { .nav-links li:nth-child(1) { display: none; } }
 @media (max-width: 1060px) { .nav-links { display: none; } }
 @media (max-width: 640px) { .nav-full { display: none; } }
+
+/* Payment gateway not live yet */
+.pay-soon { display: block; padding: 12px 14px; border-radius: 12px; background: rgba(0, 194, 255, .08); border: 1px solid rgba(0, 194, 255, .25); color: var(--text); line-height: 1.5; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none; transform: none; }
