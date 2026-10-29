@@ -214,11 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ===== RE-LOAD IFRAME (for better performance) ===== */
   const iframe = document.querySelector('.contact-form-wrap iframe');
-  const originalSrc = iframe.src;
+  const originalSrc = iframe ? iframe.src : '';
   let formSubmitted = false;
 
-  // Listen for iframe load events
-  iframe.addEventListener('load', () => {
+  // Listen for iframe load events (only pages with the contact form have it)
+  if (iframe) iframe.addEventListener('load', () => {
     if (formSubmitted) {
       // Form was submitted, reset back
       setTimeout(() => {

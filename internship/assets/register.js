@@ -365,17 +365,15 @@
       })
       .then(function (r) {
         if (r.res.ok && r.data.registrationId && amb) {
-          if (window.gtag) gtag('event', 'ambassador_registered');
-          if (window.fbq) fbq('track', 'Lead', { content_name: 'Student Ambassador' });
+          if (window.cbTrack) cbTrack('Lead', { content_name: 'Student Ambassador' });
           showAmbassadorDone(r.data, payload);
           return;
         }
         if (r.res.ok && r.data.registrationId) {
           try { sessionStorage.setItem('cbi_reg_id', r.data.registrationId); } catch (_) {}
-          if (window.gtag) gtag('event', 'internship_registered');
           var next = 'payment.html?id=' + encodeURIComponent(r.data.registrationId);
-          if (window.fbq) {
-            fbq('track', 'CompleteRegistration');
+          if (window.cbTrack) {
+            cbTrack('CompleteRegistration', { content_name: 'CodeBuzz AI Internship' });
             setTimeout(function () { window.location.href = next; }, 300); // let the pixel request leave first
           } else {
             window.location.href = next;

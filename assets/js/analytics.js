@@ -1,7 +1,8 @@
 /*
  * CodeBuzz.ai — site analytics (loaded in the <head> of every page)
  * ----------------------------------------------------------------
- * PostHog (product analytics) + Meta Pixel (ads). One place to change both.
+ * PostHog (product analytics) + Meta Pixel (ads) + Google Analytics 4. One place to change all three.
+ * Each cbTrack event goes to all three (GA4 gets its recommended names: purchase, begin_checkout, sign_up).
  * Pages call window.cbTrack(event, props) for custom events, e.g. the Purchase on payment-success.
  */
 (function () {
@@ -36,11 +37,32 @@
     fbq('track', 'PageView');
   }
 
+  /* ---------- Google Analytics 4 ---------- */
+  var GA_ID = 'G-2CSRTVXREF';
+  if (!window.gtag) {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { dataLayer.push(arguments); };
+    gtag('js', new Date());
+    gtag('config', GA_ID);
+    var ga = document.createElement('script'); ga.async = true;
+    ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+    document.head.appendChild(ga);
+  }
+
   /* ---------- Helper for custom events ---------- */
   // cbTrack('Purchase', { value: 2149, currency: 'INR' }, { eventID: 'pay_123' })
   window.cbTrack = function (event, props, metaOptions) {
     var standard = /^(PageView|ViewContent|Search|AddToCart|AddToWishlist|InitiateCheckout|AddPaymentInfo|Purchase|Lead|CompleteRegistration|Contact|Subscribe|StartTrial)$/;
     try { if (window.fbq) fbq(standard.test(event) ? 'track' : 'trackCustom', event, props || {}, metaOptions || {}); } catch (_) {}
     try { if (window.posthog && posthog.capture) posthog.capture(event, props || {}); } catch (_) {}
+    try {
+      if (window.gtag) {
+        // GA4 uses its own recommended names for the standard events
+        var p = props || {}, ga4 = { Purchase: 'purchase', InitiateCheckout: 'begin_checkout', CompleteRegistration: 'sign_up', Lead: 'generate_lead' }[event];
+        var params = { value: p.value, currency: p.currency, item_name: p.content_name };
+        if (event === 'Purchase' && metaOptions && metaOptions.eventID) params.transaction_id = metaOptions.eventID;   // GA4 de-duplicates by this
+        gtag('event', ga4 || event.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(), params);
+      }
+    } catch (_) {}
   };
 })();
