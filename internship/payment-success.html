@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment successful · CodeBuzz AI Internship Program</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Analytics: PostHog + Meta Pixel (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home">
+        <div class="logo-badge">CB</div>
+        <span>CodeBuzz<span class="accent">.ai</span></span>
+      </a>
+      <a href="./" class="btn btn-ghost btn-sm">Internship program</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="page-top" style="padding-bottom:36px">
+      <div class="container" style="text-align:center">
+        <div class="stepper" style="justify-content:center;margin-top:0">
+          <div class="st done"><b>✓</b>Your details</div>
+          <div class="bar"></div>
+          <div class="st done"><b>✓</b>Payment</div>
+          <div class="bar"></div>
+          <div class="st active"><b>3</b>Student login</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <!-- Shown only after the server confirms the payment -->
+        <div class="pay-card" id="card" hidden>
+          <div class="success-ring">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <h1 id="title">Payment successful</h1>
+          <p id="intro">Your seat in the CodeBuzz AI Internship Program is confirmed.</p>
+          <div class="demo-note" id="demoNote" hidden>This was a <b>demo payment</b> in Razorpay test mode &mdash; no real money was charged.</div>
+
+          <div class="email-note">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+            <span>We&rsquo;ve emailed your payment confirmation to <b id="email"></b>. Check your inbox (and the spam folder).</span>
+          </div>
+
+          <div class="summary" id="summary"></div>
+
+          <div class="next-steps">
+            <h3>What happens next</h3>
+            <ol id="steps"></ol>
+          </div>
+
+          <a href="login.html" class="btn btn-primary btn-lg" style="width:100%">Go to student portal
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+
+          <div class="ref-box" id="refBox" hidden>
+            <h3>Refer friends, earn &#8377;<span id="refAmt">100</span> each</h3>
+            <p>Share your referral code. When a friend registers with it and pays, you get cashback. No limit on referrals.</p>
+            <div class="ref-row">
+              <span class="ref-code-sm" id="refCode"></span>
+              <button class="copy-btn" id="refCopy" type="button">Copy link</button>
+              <a class="copy-btn" id="refWa" target="_blank" rel="noopener">Share on WhatsApp</a>
+            </div>
+          </div>
+          <p class="pay-note" style="margin-top:16px">Questions? Write to <a href="mailto:info@codebuzz.ai" style="color:var(--brand)">info@codebuzz.ai</a>. <span id="regRef"></span></p>
+        </div>
+
+        <!-- Couldn't load the details (network) -->
+        <div class="pay-card" id="fallback" hidden>
+          <h1>Thank you!</h1>
+          <p>We couldn&rsquo;t load your payment details just now. If your payment went through, a confirmation email is on its way &mdash; you can also check your status in the student portal.</p>
+          <a href="login.html" class="btn btn-primary btn-lg" style="width:100%;margin-top:18px">Go to student portal</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <span>&copy; <span data-year></span> CodeBuzz.ai · <a href="terms.html">Terms</a> · <a href="../privacy.html">Privacy</a> · <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+    </div>
+  </footer>
+
+  <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script>
+  (function () {
+    var CFG = window.CB_INTERNSHIP || {};
+    var $ = function (x) { return document.getElementById(x); };
+
+    // The payment page hands over a signed receipt in this tab only. Read it once and remove it:
+    // opening this page directly, or refreshing it, has no receipt → go to the student login instead.
+    var receipt = '';
+    try { receipt = sessionStorage.getItem('cbi_receipt') || ''; sessionStorage.removeItem('cbi_receipt'); } catch (_) {}
+    if (!receipt) { location.replace('login.html'); return; }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function rupees(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+    function fmt(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+    fetch(CFG.apiBase + '/api/internship/payments/receipt', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt: receipt })
+    })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
+      .then(function (r) {
+        // Not a real, verified payment (or this receipt was already used): don't show the page
+        if (!r.ok || !r.data.valid || !r.data.firstTime) { location.replace('login.html'); return; }
+        var d = r.data, pr = d.price || {}, later = d.dateMode === 'later' || !d.from;
+        var demo = d.paymentMode === 'test';
+
+        $('title').textContent = demo ? 'Demo payment successful' : 'Payment successful';
+        $('intro').textContent = 'Thank you, ' + d.name + '. Your seat in the CodeBuzz AI Internship Program is confirmed.';
+        $('demoNote').hidden = !demo;
+        $('email').textContent = d.email;
+        $('regRef').textContent = 'Registration ID for reference: ' + d.registrationId;
+
+        var rows = [['Internship fee', rupees(pr.feeInr)]];
+        if (pr.hardcopyInr) rows.push(['Certificate hard copy', rupees(pr.hardcopyInr)]);
+        rows.push(['Total paid', '<b>' + rupees(d.amountInr) + '</b>']);
+        rows.push(['Payment ID', '<span class="mono">' + esc(d.paymentId) + '</span>']);
+        rows.push(['Batch', later ? 'Choose in your student portal'
+          : (d.batchNumber ? 'Batch ' + String(d.batchNumber).padStart(2, '0') + ' · ' : '') + fmt(d.from) + ' → ' + fmt(d.to)]);
+        rows.push(['Mode', 'Virtual · live on Zoom']);
+        $('summary').innerHTML = rows.map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+
+        var steps = [
+          ['Check your email', 'Your payment confirmation and receipt are in your inbox.'],
+          ['Open your student portal', 'Log in with your email. First time? Use the “Set up your password” link from your welcome email.']
+        ];
+        if (later) steps.push(['Choose your batch', 'In the portal, pick any upcoming batch and confirm it.']);
+        steps.push(['Join on Zoom', 'We’ll email your Zoom link and joining details before your batch begins. Keep a laptop and a stable internet connection ready.']);
+        if (pr.hardcopyInr) steps.push(['Printed certificate', 'Couriered to your registered home address after you complete the program.']);
+        $('steps').innerHTML = steps.map(function (x) { return '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>'; }).join('');
+
+        if (d.referralCode) {
+          var link = location.origin + location.pathname.replace(/payment-success(\.html)?$/, 'register.html') + '?ref=' + encodeURIComponent(d.referralCode);
+          $('refCode').textContent = d.referralCode;
+          if (d.referralRewardInr) $('refAmt').textContent = d.referralRewardInr;
+          $('refWa').href = 'https://wa.me/?text=' + encodeURIComponent('Join the CodeBuzz AI Internship Program (2 weeks, virtual, certificate included). Use my referral code ' + d.referralCode + ' when you register: ' + link);
+          $('refCopy').onclick = function () {
+            var b = $('refCopy'), done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy link'; }, 1600); };
+            if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, done); else done();
+          };
+          $('refBox').hidden = false;
+        }
+        $('card').hidden = false;
+
+        // Ad conversion: only for a real (live) payment the server just confirmed, and only once.
+        // eventID lets Meta de-duplicate it if the same purchase is ever reported twice.
+        if (!demo) {
+          if (window.cbTrack) cbTrack('Purchase', { value: d.amountInr, currency: 'INR', content_name: 'CodeBuzz AI Internship' }, { eventID: d.paymentId });
+          if (window.gtag) gtag('event', 'internship_paid', { value: d.amountInr, currency: 'INR' });
+        }
+      })
+      .catch(function () { $('fallback').hidden = false; });
+  })();
+  </script>
+</body>
+</html>

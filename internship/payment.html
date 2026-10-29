@@ -11,22 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/internship.css" />
-  <!-- Meta Pixel Code -->
-  <script>
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window,document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '1393333359453502');
-  fbq('track', 'PageView');
-  </script>
-  <noscript><img height="1" width="1" style="display:none" alt=""
-  src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
-  <!-- End Meta Pixel Code -->
+  <!-- Analytics: PostHog + Meta Pixel (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
 </head>
 <body>
 
@@ -120,6 +107,19 @@
       </div>
     </section>
   </main>
+
+  <!-- Payment failed popup -->
+  <div class="modal" id="failModal" role="dialog" aria-modal="true" aria-labelledby="failTitle">
+    <div class="auth-card confirm-card" style="text-align:center">
+      <div class="fail-ring" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <h1 id="failTitle">Payment failed</h1>
+      <p class="sub" id="failText">Your payment didn&rsquo;t go through. Please try again, or use a different method like UPI, another card or net banking.</p>
+      <button class="btn btn-primary" type="button" id="failRetry">Try again</button>
+      <button class="btn btn-ghost" type="button" id="failClose" style="margin-top:10px">Close</button>
+    </div>
+  </div>
 
   <footer class="footer">
     <div class="container">
@@ -248,11 +248,30 @@
       say('We couldn’t load your registration right now. Please refresh in a moment.', true);
     });
 
+    // Verified payment → the payment-success page. The signed receipt goes via sessionStorage (not the URL),
+    // so the success page can prove the payment is real and show it only once.
+    var lastResp = null;
+    function goToSuccess(receipt) {
+      try { sessionStorage.setItem('cbi_receipt', receipt); } catch (_) {}
+      location.replace('payment-success.html');
+    }
+    function showFailure(reason) {
+      $('failText').textContent = 'Your payment didn\u2019t go through' + (reason ? ' (' + reason + ')' : '') +
+        '. Please try again, or use a different method like UPI, another card or net banking. If money was deducted, write to info@codebuzz.ai before paying again.';
+      $('failModal').classList.add('open');
+    }
+    $('failRetry').addEventListener('click', function () { $('failModal').classList.remove('open'); btn.click(); });
+    $('failClose').addEventListener('click', function () { $('failModal').classList.remove('open'); });
+
     // After paying, the server may still be confirming (e.g. bank delays). Check a few times.
     function waitForConfirmation(tries) {
       setBusy(true, 'Confirming payment…');
       load().then(function (d) {
-        if (d.paymentDone === 'Yes') return;
+        if (d.paymentDone === 'Yes') {
+          // Confirmed by Razorpay's webhook meanwhile: get the receipt and continue to the success page
+          if (lastResp) post('/api/internship/payments/verify', lastResp).then(function (v) { if (v.ok && v.data.receipt) goToSuccess(v.data.receipt); });
+          return;
+        }
         if (tries > 0) return setTimeout(function () { waitForConfirmation(tries - 1); }, 4000);
         setBusy(false);
         say('We’re still confirming your payment. If money was deducted, your seat will be confirmed automatically — refresh this page in a few minutes, or write to info@codebuzz.ai with your registration ID.', true);
@@ -300,6 +319,7 @@
             theme: { color: '#00C2FF' },
             handler: function (resp) {
               setBusy(true, 'Confirming payment…');
+              lastResp = { registrationId: id, razorpay_order_id: resp.razorpay_order_id, razorpay_payment_id: resp.razorpay_payment_id, razorpay_signature: resp.razorpay_signature };
               // The server confirms the money is captured; while the bank is still settling it answers
               // "pending" (202), so we ask again a few times before falling back to polling.
               (function verify(tries) {
@@ -310,24 +330,32 @@
                   razorpay_signature: resp.razorpay_signature
                 }).then(function (v) {
                   if (v.ok && v.data.paymentDone === 'Yes') {
+                    // The Purchase event is sent by the success page, after it re-checks the payment
+                    if (v.data.receipt) return goToSuccess(v.data.receipt);
                     load().catch(function () {}); showPaid(v.data.paymentMode, { amountPaidInr: o.amount / 100, dateMode: currentMode });
-                    if (window.gtag && v.data.paymentMode === 'live') gtag('event', 'internship_paid');
-                    if (window.fbq && v.data.paymentMode === 'live') fbq('track', 'Purchase', { value: o.amount / 100, currency: 'INR', content_name: 'CodeBuzz AI Internship' });
                   }
                   else if (v.data.pending && tries > 0) { say(v.data.message || 'Confirming your payment…'); setTimeout(function () { verify(tries - 1); }, 4000); }
-                  else if (v.status === 400) { setBusy(false); say(v.data.message || 'We could not verify this payment.', true); }
+                  else if (v.status === 400) { setBusy(false); say(v.data.message || 'We could not verify this payment.', true); showFailure(''); }
                   else waitForConfirmation(5);
                 }).catch(function () { waitForConfirmation(5); });
               })(4);
             },
             modal: {
-              ondismiss: function () { if (!btn.textContent.match(/Confirming|complete/)) { setBusy(false); say('Payment cancelled. You can try again whenever you’re ready.'); } }
+              ondismiss: function () {
+                if (btn.textContent.match(/Confirming|complete/)) return;
+                setBusy(false);
+                // Razorpay lets the student retry inside its window; if they close it after a failure, show our popup
+                if (failedReason !== null) { say('Payment failed. You can try again.', true); showFailure(failedReason); }
+                else say('Payment cancelled. You can try again whenever you’re ready.');
+              }
             }
           });
+          var failedReason = null;
           rzp.on('payment.failed', function (f) {
-            var reason = f && f.error && f.error.description;
-            say('Payment failed' + (reason ? ': ' + reason : '') + '. No money was taken — please try again.', true);
+            failedReason = (f && f.error && f.error.description) || '';
+            if (window.cbTrack) cbTrack('PaymentFailed', { value: o.amount / 100, currency: 'INR' });
           });
+          if (window.cbTrack) cbTrack('InitiateCheckout', { value: o.amount / 100, currency: 'INR', content_name: 'CodeBuzz AI Internship' });
           rzp.open();
         })
         .catch(function (err) {

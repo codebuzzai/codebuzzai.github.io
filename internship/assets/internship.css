@@ -915,3 +915,27 @@ section:has(> .legal) { padding-bottom: 80px; }
 @media (max-width: 860px) { .later-cta { grid-template-columns: 1fr; gap: 14px; padding: 24px 22px; } }
 .addon > span { flex: 1; min-width: 0; }
 @media (max-width: 560px) { .hero-stats { display: grid; grid-template-columns: repeat(2, auto); justify-content: start; column-gap: 40px; row-gap: 20px; } }
+
+/* Payment failed popup */
+.fail-ring { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,107,107,.12); color: #FF8A8A; }
+/* Payment-success page */
+.email-note { display: flex; gap: 12px; align-items: flex-start; text-align: left; margin: 22px 0 6px; padding: 14px 16px; border-radius: 14px;
+  background: rgba(0,194,255,.06); border: 1px solid rgba(0,194,255,.3); color: var(--muted); font-size: .92rem; }
+.email-note svg { flex-shrink: 0; margin-top: 2px; color: var(--brand); }
+.email-note b { color: var(--text); }
+.next-steps { text-align: left; margin: 22px 0 22px; }
+.next-steps h3 { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 12px; }
+.next-steps ol { list-style: none; counter-reset: s; display: grid; gap: 14px; }
+.next-steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; }
+.next-steps li::before { content: counter(s); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-size: .82rem; font-weight: 700; color: var(--brand); background: rgba(0,194,255,.1); border: 1px solid rgba(0,194,255,.35); }
+.next-steps li b { font-size: .96rem; }
+.next-steps li span { color: var(--muted); font-size: .9rem; }
+#demoNote { margin: 14px 0 0; }
+
+/* Nav: keep link labels on one line next to the longer "Register for internship" button */
+.nav-links a, .nav-actions .btn { white-space: nowrap; }
+@media (max-width: 1440px) { .nav-links { gap: 24px; } .nav-links li:nth-child(3) { display: none; } }
+@media (max-width: 1200px) { .nav-links li:nth-child(1) { display: none; } }
+@media (max-width: 1060px) { .nav-links { display: none; } }
+@media (max-width: 640px) { .nav-full { display: none; } }

@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CodeBuzz AI Internship Program</title>
-  <meta name="description" content="CodeBuzz AI Internship Program — a 2-week internship for students covering programming basics, system design, basics of AI and hands-on coding, with an internship certificate." />
+  <meta name="description" content="CodeBuzz AI Internship Program — a 2-week virtual internship (live on Zoom) for students covering programming basics, system design, basics of AI and hands-on coding, with an internship certificate." />
   <meta property="og:title" content="CodeBuzz AI Internship Program" />
-  <meta property="og:description" content="2 weeks. Programming, system design, AI basics and hands-on coding. Certificate included." />
+  <meta property="og:description" content="2 weeks, 100% virtual on Zoom. Programming, system design, AI basics and hands-on coding. Certificate included." />
   <meta property="og:image" content="https://codebuzz.ai/assets/images/1771666520573-codebuzz-hero.jfif" />
   <meta property="og:type" content="website" />
   <meta name="theme-color" content="#0D1117" />
@@ -24,22 +24,9 @@
     gtag('js', new Date());
     gtag('config', 'G-2CSRTVXREF');
   </script>
-  <!-- Meta Pixel Code -->
-  <script>
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window,document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '1393333359453502');
-  fbq('track', 'PageView');
-  </script>
-  <noscript><img height="1" width="1" style="display:none" alt=""
-  src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
-  <!-- End Meta Pixel Code -->
+  <!-- Analytics: PostHog + Meta Pixel (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
 </head>
 <body>
 
@@ -67,7 +54,7 @@
       </ul>
       <div class="nav-actions">
         <a href="login.html" class="btn btn-ghost btn-sm">Student login</a>
-        <a href="register.html" class="btn btn-primary btn-sm">Register now</a>
+        <a href="register.html" class="btn btn-primary btn-sm">Register<span class="nav-full"> for internship</span></a>
       </div>
     </div>
   </nav>
@@ -78,16 +65,16 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <span class="pill"><span class="dot"></span>Registrations are open</span>
+          <span class="pill"><span class="dot"></span>Registrations are open &middot; 100% virtual</span>
           <h1>
             <span class="line"><span>CodeBuzz <span class="grad">AI</span></span></span>
             <span class="line"><span>Internship</span></span>
             <span class="line"><span>Program</span></span>
           </h1>
-          <p class="hero-sub">Two focused weeks to learn programming, system design and the basics of AI — and to write real code with engineers who ship software every day.</p>
+          <p class="hero-sub">A two-week virtual internship to learn programming, system design and the basics of AI — and to write real code, live on Zoom, with engineers who ship software every day.</p>
           <div class="hero-actions">
             <a href="register.html" class="btn btn-primary btn-lg">
-              Register now
+              Register for internship
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </a>
             <a href="#curriculum" class="btn btn-ghost btn-lg">What you'll learn</a>
@@ -96,7 +83,7 @@
             <div><strong data-count="2">0</strong><span>weeks</span></div>
             <div><strong data-count="4">0</strong><span>learning tracks</span></div>
             <div><strong>✓</strong><span>certificate</span></div>
-            <div><strong>Chennai</strong><span>location</span></div>
+            <div><strong>Virtual</strong><span>live on Zoom</span></div>
           </div>
         </div>
 
@@ -141,7 +128,7 @@
             <span class="tag">Duration</span>
             <div class="hl-num grad">2</div>
             <h3>2-week internship</h3>
-            <p>A short, intensive program. A new batch starts every Monday &mdash; or register now and pick your dates later.</p>
+            <p>A short, intensive, fully virtual program, live on Zoom. A new batch starts every Monday &mdash; or register now and pick your dates later.</p>
           </article>
           <article class="hl reveal d1">
             <span class="tag">Learn</span>
@@ -297,7 +284,7 @@
         <div class="section-head center reveal">
           <span class="eyebrow">Batch dates</span>
           <h2>Pick your two weeks.</h2>
-          <p>A new batch starts every Monday from 16 Nov 2026 to 11 Jan 2027. Each batch runs Monday to Sunday, two weeks long, in Chennai.</p>
+          <p>A new batch starts every Monday from 16 Nov 2026 to 11 Jan 2027. Each batch runs Monday to Sunday, two weeks long, live online on Zoom.</p>
         </div>
         <div class="batches" id="batchList">
           <a class="batch reveal" href="register.html?start=2026-11-16" data-start="2026-11-16">
@@ -474,8 +461,12 @@
             <p>College students from any year of a diploma, undergraduate or postgraduate program can register. No prior coding experience is needed.</p>
           </details>
           <details>
-            <summary>Where is the internship held?<span class="pm"></span></summary>
-            <p>In Chennai, Tamil Nadu. We'll email you the venue and timings for your batch before it begins.</p>
+            <summary>Is this a virtual internship?<span class="pm"></span></summary>
+            <p>Yes &mdash; it's 100% virtual. All sessions are delivered live on <b>Zoom</b>, so you can join from anywhere. We'll email your Zoom link and session timings before your batch begins.</p>
+          </details>
+          <details>
+            <summary>What do I need to attend?<span class="pm"></span></summary>
+            <p>A laptop or desktop computer, a stable internet connection and the free Zoom app. Keep your camera and microphone working for the live sessions and your project demo. No prior coding experience is needed.</p>
           </details>
           <details>
             <summary>How long is the internship?<span class="pm"></span></summary>
@@ -533,7 +524,7 @@
           <h2>Ready to start<br /><span class="grad">building?</span></h2>
           <p>Registration takes about two minutes. Pick your dates, fill in your details and secure your spot.</p>
           <a href="register.html" class="btn btn-register">
-            Register now
+            Register for internship
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
           <div class="cta-note">Questions? Write to <a href="mailto:info@codebuzz.ai" style="color:var(--brand)">info@codebuzz.ai</a></div>
@@ -544,7 +535,7 @@
   </main>
 
   <div class="sticky-cta" id="stickyCta">
-    <a href="register.html" class="btn btn-primary btn-lg">Register now</a>
+    <a href="register.html" class="btn btn-primary btn-lg">Register for internship</a>
   </div>
 
   <footer class="footer" style="margin-top:0">

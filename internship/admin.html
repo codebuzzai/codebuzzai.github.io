@@ -11,6 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Analytics: PostHog + Meta Pixel (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
 </head>
 <body>
   <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div></div>
@@ -96,7 +99,8 @@
             <h2>Referral cashback</h2>
             <div class="stat-row">
               <div class="stat"><strong id="o-r-pending">0</strong><span>Pending (friend not paid)</span></div>
-              <div class="stat"><strong id="o-r-earned">0</strong><span>Earned (to pay)</span></div>
+              <div class="stat"><strong id="o-r-earned">0</strong><span>Earned (to pay now)</span></div>
+              <div class="stat"><strong id="o-r-hold">0</strong><span>On hold (referrer not paid)</span></div>
               <div class="stat"><strong id="o-r-paid">0</strong><span>Paid out</span></div>
               <div class="stat"><strong id="o-r-cancel">0</strong><span>Demo (no cashback) &middot; cancelled</span></div>
             </div>
@@ -124,9 +128,11 @@
       <section id="tab-cashback" hidden>
         <div class="toolbar">
           <select class="ctrl" id="f-rstatus">
-            <option value="earned">Earned &mdash; to pay</option>
+            <option value="earned">Earned &mdash; to pay now</option>
+            <option value="hold">On hold (referrer not paid)</option>
             <option value="pending">Pending (friend not paid)</option>
             <option value="paid">Paid out</option>
+            <option value="demo">Demo (no cashback)</option>
             <option value="cancelled">Cancelled</option>
             <option value="">All</option>
           </select>
@@ -265,6 +271,8 @@
       $('o-due').textContent = P.inr(o.referrals.earned.amountInr);
       $('o-r-pending').textContent = o.referrals.pending.count + ' · ' + P.inr(o.referrals.pending.amountInr);
       $('o-r-earned').textContent = o.referrals.earned.count + ' · ' + P.inr(o.referrals.earned.amountInr);
+      var hold = o.referrals.onHold || { count: 0, amountInr: 0 };
+      $('o-r-hold').textContent = hold.count + ' · ' + P.inr(hold.amountInr);
       $('o-r-paid').textContent = o.referrals.paid.count + ' · ' + P.inr(o.referrals.paid.amountInr);
       $('o-r-cancel').textContent = (o.referrals.demo ? o.referrals.demo.count : 0) + ' \u00b7 ' + o.referrals.cancelled.count;
       $('o-hc').textContent = o.hardcopies ? o.hardcopies.paid : 0;
@@ -332,7 +340,7 @@
               '<td>' + AMB_TAG + '<br><span class="muted" style="font-size:.8rem">' + e(s.email) + '</span></td>' +
               '<td><span class="muted">—</span></td><td><span class="muted">No fee</span></td><td><span class="muted">—</span></td>' +
               '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
-              '<td class="num">' + (s.cashbackDueInr ? P.inr(s.cashbackDueInr) : '<span class="muted">—</span>') + '</td></tr>';
+              '<td class="num">' + cashCell(s) + '</td></tr>';
           }
           return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="mono">' + e(s.registrationId) + '</td>' +
             '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
@@ -341,7 +349,7 @@
             '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') + '</td>' +
             '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
             '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
-            '<td class="num">' + (s.cashbackDueInr ? P.inr(s.cashbackDueInr) : '<span class="muted">—</span>') + '</td></tr>';
+            '<td class="num">' + cashCell(s) + '</td></tr>';
         }).join('') + '</tbody></table>';
       $('s-table').querySelectorAll('tr[data-id]').forEach(function (tr) { tr.addEventListener('click', function () { openStudent(tr.dataset.id); }); });
     }
@@ -351,15 +359,32 @@
     function filteredRewards() {
       var st = $('f-rstatus').value, q = $('rq').value.trim().toLowerCase();
       return state.rewards.filter(function (w) {
-        if (st && w.status !== st) return false;
+        if (st && rstate(w) !== st) return false;
         if (q && [w.referrer.name, w.referrer.registrationId, w.referrer.referralCode, w.referred.name, w.referred.registrationId].join(' ').toLowerCase().indexOf(q) < 0) return false;
         return true;
       });
     }
+    // One rule for every cashback number on this page (same as the server's overview):
+    // demo = friend paid in test mode, hold = earned but the student referrer hasn't paid yet, earned = payable now
+    function rstate(w) {
+      if (w.status === 'cancelled') return 'cancelled';
+      if (w.demo) return 'demo';
+      if (w.status === 'earned' && w.payoutOnHold) return 'hold';
+      return w.status;
+    }
+    function cashCell(s) {
+      if (s.cashbackDueInr) return P.inr(s.cashbackDueInr);
+      if (s.cashbackOnHoldInr) return '<span class="muted" title="Paid after their own payment">' + P.inr(s.cashbackOnHoldInr) + ' on hold</span>';
+      return '<span class="muted">—</span>';
+    }
     function renderRewards() {
       var list = filteredRewards();
-      var total = list.reduce(function (a, w) { return a + w.amountInr; }, 0);
-      $('r-count').textContent = list.length + ' entries · ' + P.inr(total);
+      var sum = {};
+      list.forEach(function (w) { var k = rstate(w); sum[k] = (sum[k] || 0) + w.amountInr; });
+      var parts = [['earned', 'to pay now'], ['hold', 'on hold'], ['pending', 'pending'], ['paid', 'paid out']]
+        .filter(function (x) { return sum[x[0]]; }).map(function (x) { return P.inr(sum[x[0]]) + ' ' + x[1]; });
+      $('r-count').textContent = list.length + ' entries' + (parts.length ? ' · ' + parts.join(' · ') : '') +
+        (sum.demo || sum.cancelled ? ' (demo and cancelled entries are not counted)' : '');
       if (!list.length) { $('r-table').innerHTML = '<div class="empty">Nothing here.</div>'; return; }
       $('r-table').innerHTML = '<table class="tbl"><thead><tr><th>Referrer (pay to)</th><th>Friend referred</th><th>Status</th><th class="num">Amount</th><th>Dates</th><th>Payout reference</th><th></th></tr></thead><tbody>' +
         list.map(function (w) {
@@ -560,7 +585,7 @@
       var items = [];
       items.push(isAmb(s) ? '<li>The ambassador\u2019s registration and details</li>' : '<li>The student\u2019s registration and all personal details</li>');
       if (d.payments.length) items.push('<li><b>' + d.payments.length + ' payment record(s)</b>' + (paid ? (s.paymentMode === 'test' ? ' \u2014 demo payment only (test mode, no real money)' : ' \u2014 they paid ' + P.inr(s.amountPaidInr) + '.') : '') + '</li>');
-      if (d.referrals.length) items.push('<li><b>' + d.referrals.length + ' referral cashback record(s)</b> where they referred someone' + (s.cashbackDueInr ? ' (' + P.inr(s.cashbackDueInr) + ' still due to them)' : '') + '</li>');
+      if (d.referrals.length) items.push('<li><b>' + d.referrals.length + ' referral cashback record(s)</b> where they referred someone' + (s.cashbackDueInr + (s.cashbackOnHoldInr || 0) ? ' (' + P.inr(s.cashbackDueInr + (s.cashbackOnHoldInr || 0)) + ' still due to them)' : '') + '</li>');
       if (s.referredBy) items.push('<li>The cashback ' + e(s.referredBy.name) + ' gets for referring them</li>');
       if (s.referralCode) items.push('<li>Their referral code <b>' + e(s.referralCode) + '</b> stops working; students who used it stay registered</li>');
       if (s.loginActivated === 'Yes') items.push('<li>Their student login</li>');
@@ -623,7 +648,7 @@
             ['Own referral code', s.referralCode ? '<span class="mono">' + e(s.referralCode) + '</span>' : '<span class="muted">\u2014</span>', true],
             ['Referred by', s.referredBy ? e(s.referredBy.name) + ' <span class="muted mono">' + e(s.referredBy.registrationId) + ' · ' + e(s.referredBy.code) + '</span>' : 'No one', true],
             ['Friends referred', s.referredTotal + ' (' + s.referredJoined + ' paid' + (s.referredDemo ? ', ' + s.referredDemo + ' demo' : '') + ')'],
-            ['Cashback', P.inr(s.cashbackDueInr) + ' to pay · ' + P.inr(s.cashbackPaidInr) + ' paid']
+            ['Cashback', P.inr(s.cashbackDueInr) + ' to pay · ' + (s.cashbackOnHoldInr ? P.inr(s.cashbackOnHoldInr) + ' on hold (pays after their own payment) · ' : '') + P.inr(s.cashbackPaidInr) + ' paid']
           ]) +
           (r.data.referrals.length ? '<div class="table-wrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Friend</th><th>Cashback</th><th class="num">Amount</th></tr></thead><tbody>' +
             r.data.referrals.map(function (w) {
@@ -706,16 +731,16 @@
       a.download = name; document.body.appendChild(a); a.click(); a.remove();
     }
     $('csv-students').addEventListener('click', function () {
-      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due', 'Cashback paid', 'Registered at', 'Certificate hard copy', 'Heard from', 'Heard from (other)', 'Batch chosen at']];
+      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due (payable now)', 'Cashback on hold', 'Cashback paid', 'Registered at', 'Certificate hard copy', 'Heard from', 'Heard from (other)', 'Batch chosen at']];
       filteredStudents().forEach(function (s) {
-        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackPaidInr, s.registeredAt, s.certificateHardcopy ? 'Yes' : 'No', SOURCES[s.heardFrom] || s.heardFrom, s.heardFromOther, s.batchChosenAt]);
+        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackOnHoldInr || 0, s.cashbackPaidInr, s.registeredAt, s.certificateHardcopy ? 'Yes' : 'No', SOURCES[s.heardFrom] || s.heardFrom, s.heardFromOther, s.batchChosenAt]);
       });
       download('internship-students.csv', csv(rows));
     });
     $('csv-rewards').addEventListener('click', function () {
       var rows = [['Status', 'Amount', 'Payout on hold', 'Referrer type', 'Referrer ID', 'Referrer', 'Referrer phone', 'Referral code', 'Friend ID', 'Friend', 'Referred on', 'Earned on', 'Paid at', 'Reference', 'Note']];
       filteredRewards().forEach(function (w) {
-        rows.push([w.status, w.amountInr, w.payoutOnHold ? 'Yes (referrer not paid)' : '', w.referrer.type === 'ambassador' ? 'Ambassador' : 'Student', w.referrer.registrationId, w.referrer.name, w.referrer.phone, w.referrer.referralCode, w.referred.registrationId, w.referred.name, w.createdOn, w.earnedOn, w.paidAt, w.payoutReference, w.payoutNote]);
+        rows.push([{ earned: 'earned (to pay now)', hold: 'earned (on hold)', demo: 'demo (no cashback)' }[rstate(w)] || w.status, w.amountInr, w.payoutOnHold ? 'Yes (referrer not paid)' : '', w.referrer.type === 'ambassador' ? 'Ambassador' : 'Student', w.referrer.registrationId, w.referrer.name, w.referrer.phone, w.referrer.referralCode, w.referred.registrationId, w.referred.name, w.createdOn, w.earnedOn, w.paidAt, w.payoutReference, w.payoutNote]);
       });
       download('internship-referral-cashback.csv', csv(rows));
     });
