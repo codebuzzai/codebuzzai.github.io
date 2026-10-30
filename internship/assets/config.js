@@ -18,6 +18,6 @@
     feeInr: 1999,                // fallbacks only: the live prices come from the API (/pricing)
     hardcopyFeeInr: 150,         // optional printed certificate, courier included
     referralRewardInr: 100,      // cashback per referred student who pays (keep in sync with the API)
-    paymentsEnabled: false       // false = Pay button disabled with a "payment window will be enabled from Nov 1st onwards" note (set true when Razorpay is ready)
+    paymentsEnabled: false       // false = Pay button disabled with a "payment window will be enabled soon" note (set true when Razorpay is ready)
   };
 })();
