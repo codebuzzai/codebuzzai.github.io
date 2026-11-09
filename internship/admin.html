@@ -58,6 +58,7 @@
         <button class="on" data-tab="overview" type="button">Overview</button>
         <button data-tab="students" type="button">Students</button>
         <button data-tab="cashback" type="button">Referral cashback</button>
+        <button data-tab="reminders" type="button">Reminders</button>
       </div>
       <div class="test-banner" id="testBanner" hidden>Razorpay is in <b>test mode</b>: payments are demo payments (no real money). They're shown as <b>Demo paid</b> and aren't counted in revenue or cashback.</div>
       <div class="msg" id="m" role="alert"></div>
@@ -142,6 +143,21 @@
         <p class="muted" id="r-count" style="font-size:.85rem;margin-bottom:10px"></p>
         <div class="table-wrap" id="r-table"></div>
       </section>
+
+      <!-- Reminders -->
+      <section id="tab-reminders" hidden>
+        <div class="toolbar">
+          <input class="ctrl grow" id="mq" type="search" placeholder="Search name, ID, mobile, college" />
+          <select class="ctrl" id="m-batch"><option value="">All batches</option></select>
+          <select class="ctrl" id="m-pay"><option value="">Any payment</option><option value="paid">Paid</option><option value="unpaid">Not paid</option></select>
+          <button class="btn btn-ghost btn-sm" id="csv-reminders" type="button">Export CSV</button>
+        </div>
+        <div class="rem-batch" id="m-panel" hidden></div>
+        <div class="msg" id="m-rem" role="status"></div>
+        <p class="muted" id="m-count" style="font-size:.85rem;margin-bottom:10px"></p>
+        <div class="table-wrap" id="m-table"></div>
+        <p class="muted" style="font-size:.8rem;margin-top:12px">Internship reminders can be sent to paid students in the 7 days before their batch starts. Every reminder sent is counted here.</p>
+      </section>
     </div>
   </main>
 
@@ -170,6 +186,32 @@
         <button class="btn btn-ghost" type="button" id="pm-cancel" style="margin-top:10px">Cancel</button>
       </form>
       <div class="msg" id="m-paid" role="alert"></div>
+    </div>
+  </div>
+
+  <!-- Internship reminder popup (one student or a whole batch) -->
+  <div class="modal" id="remModal" role="dialog" aria-modal="true" aria-labelledby="rm-title">
+    <div class="auth-card">
+      <h1 id="rm-title" style="font-size:1.4rem">Send internship reminder</h1>
+      <p class="sub" id="rm-who"></p>
+      <form id="f-rem" novalidate>
+        <div class="field">
+          <label for="rm-zoom">Zoom link <span class="muted">(optional)</span></label>
+          <input class="ctrl" id="rm-zoom" type="url" maxlength="300" placeholder="https://zoom.us/j/..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="rm-time">Session time <span class="muted">(optional)</span></label>
+          <input class="ctrl" id="rm-time" type="text" maxlength="80" placeholder="e.g. 7:00 PM – 9:00 PM IST" />
+        </div>
+        <div class="field">
+          <label for="rm-note">Note to students <span class="muted">(optional)</span></label>
+          <textarea class="ctrl" id="rm-note" maxlength="800" placeholder="e.g. Day 1: introductions and setup. Keep VS Code installed."></textarea>
+        </div>
+        <label class="check-row" id="rm-skipwrap" hidden><input type="checkbox" id="rm-skip" checked /> <span>Skip students who already got this reminder</span></label>
+        <button class="btn btn-primary" type="submit" id="rm-send">Send reminder</button>
+        <button class="btn btn-ghost" type="button" id="rm-cancel" style="margin-top:10px">Cancel</button>
+      </form>
+      <div class="msg" id="m-rm" role="alert"></div>
     </div>
   </div>
 
@@ -222,7 +264,7 @@
     // ---------- Tabs ----------
     function tab(name) {
       document.querySelectorAll('[data-tab]').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === name); });
-      ['overview', 'students', 'cashback'].forEach(function (t) { $('tab-' + t).hidden = t !== name; });
+      ['overview', 'students', 'cashback', 'reminders'].forEach(function (t) { $('tab-' + t).hidden = t !== name; });
     }
     document.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab(b.dataset.tab); }); });
 
@@ -238,7 +280,7 @@
         if (bad) return P.msg($('m'), bad.data.message || 'Could not load data.');
         state.overview = rs[0].data; state.students = rs[1].data.students; state.rewards = rs[2].data.rewards;
         renderOverview(); fillBatchFilter(); renderStudents(); renderRewards();
-      });
+      }).then(loadReminders);
     }
     function start() { show('app'); loadAll(); }
 
@@ -743,6 +785,161 @@
         rows.push([{ earned: 'earned (to pay now)', hold: 'earned (on hold)', demo: 'demo (no cashback)' }[rstate(w)] || w.status, w.amountInr, w.payoutOnHold ? 'Yes (referrer not paid)' : '', w.referrer.type === 'ambassador' ? 'Ambassador' : 'Student', w.referrer.registrationId, w.referrer.name, w.referrer.phone, w.referrer.referralCode, w.referred.registrationId, w.referred.name, w.createdOn, w.earnedOn, w.paidAt, w.payoutReference, w.payoutNote]);
       });
       download('internship-referral-cashback.csv', csv(rows));
+    });
+
+    // ---------- Reminders ----------
+    var rem = { data: null, target: null };
+    function loadReminders() {
+      return P.api('/admin/reminders', { auth: 'admin' }).then(function (r) {
+        if (!r.ok) { $('m-table').innerHTML = '<div class="empty">' + e(r.data.message || 'Could not load reminders.') + '</div>'; return; }
+        rem.data = r.data; fillReminderBatches(); renderReminders();
+      });
+    }
+    function remBatchKey(s) { return s.dateMode === 'later' || !s.from ? 'later' : s.dateMode === 'custom' ? 'custom' : s.from; }
+    function remBatchText(s) {
+      if (s.dateMode === 'later' || !s.from) return '<span class="muted">Not chosen yet</span>';
+      return (s.dateMode === 'custom' ? 'Custom dates' : 'Batch ' + String(s.batchNumber || '').padStart(2, '0')) +
+        '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + ' → ' + P.date(s.to) + '</span>';
+    }
+    function fillReminderBatches() {
+      var cur = $('m-batch').value, d = rem.data;
+      var count = function (k) { return d.students.filter(function (s) { return remBatchKey(s) === k; }).length; };
+      $('m-batch').innerHTML = '<option value="">All batches</option>' + d.batches.map(function (b) {
+        return '<option value="' + b.from + '">Batch ' + String(b.number).padStart(2, '0') + ' · ' + P.date(b.from) + (b.upcoming ? '' : ' (started)') + ' (' + b.students + ')</option>';
+      }).join('') + '<option value="custom">Custom dates (' + count('custom') + ')</option><option value="later">Batch not chosen yet (' + count('later') + ')</option>';
+      $('m-batch').value = cur;
+    }
+    function filteredReminders() {
+      var q = $('mq').value.trim().toLowerCase(), b = $('m-batch').value, pay = $('m-pay').value;
+      return rem.data.students.filter(function (s) {
+        if (b && remBatchKey(s) !== b) return false;
+        if (pay === 'paid' && s.paymentDone !== 'Yes') return false;
+        if (pay === 'unpaid' && s.paymentDone === 'Yes') return false;
+        if (q && [s.registrationId, s.fullName, s.phone, s.college, s.email].join(' ').toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+    }
+    function sentText(x) {
+      return x.sent ? 'Sent ' + x.sent + (x.sent === 1 ? ' time' : ' times') + '<br><span class="muted">last ' + P.date(x.lastAt) + '</span>' : '<span class="muted">Not sent yet</span>';
+    }
+    function payCell(s) {
+      if (s.paymentDone === 'Yes') return s.paymentMode === 'test' ? '<span class="tag violet">Demo paid</span>' : '<span class="tag green">Paid</span>';
+      return '<button class="btn btn-primary btn-sm" type="button" data-payrem="' + e(s.registrationId) + '">Send payment reminder</button>' +
+        '<div class="rem-meta">' + sentText(s.paymentReminders) + '</div>';
+    }
+    function intCell(s) {
+      var ir = s.internshipReminder, why = {
+        no_batch: 'No batch chosen yet', started: 'Batch has started',
+        not_paid: 'Available after payment', not_yet: 'Opens on ' + P.date(ir.opens)
+      }[ir.reason];
+      var btn = '<button class="btn btn-sm ' + (ir.allowed ? 'btn-primary' : 'btn-ghost') + '" type="button" data-intrem="' + e(s.registrationId) + '"' + (ir.allowed ? '' : ' disabled') + '>Send Internship reminder</button>';
+      return btn + '<div class="rem-meta">' + (ir.allowed ? (s.internshipReminders.sent ? sentText(s.internshipReminders) : 'Starts in ' + ir.daysLeft + (ir.daysLeft === 1 ? ' day' : ' days')) : why + (s.internshipReminders.sent ? '<br>' + sentText(s.internshipReminders) : '')) + '</div>';
+    }
+    function renderBatchPanel() {
+      var b = $('m-batch').value, panel = $('m-panel');
+      var batch = rem.data.batches.filter(function (x) { return x.from === b; })[0];
+      if (!batch || !batch.upcoming) { panel.hidden = true; panel.innerHTML = ''; return; }
+      var name = 'Batch ' + String(batch.number).padStart(2, '0');
+      panel.innerHTML = '<div><strong>' + name + ' starts ' + P.date(batch.from) + '</strong>' +
+        '<span class="muted">' + (batch.daysLeft === 1 ? 'Tomorrow' : 'In ' + batch.daysLeft + ' days') + ' · ' + batch.students + ' registered · ' + batch.paid + ' paid · ' + batch.reminded + ' of ' + batch.paid + ' reminded</span></div>' +
+        '<div class="rem-batch-act"><button class="btn btn-primary btn-sm" id="m-bulk" type="button"' + (batch.reminderOpen && batch.paid ? '' : ' disabled') + '>Send bulk Internship reminder</button>' +
+        '<span class="muted">' + (!batch.reminderOpen ? 'Opens on ' + P.date(batch.reminderOpens) + ' (7 days before)' : !batch.paid ? 'No paid students in this batch yet' : 'Goes to the ' + batch.paid + ' paid ' + (batch.paid === 1 ? 'student' : 'students')) + '</span></div>';
+      panel.hidden = false;
+      $('m-bulk').addEventListener('click', function () { openReminder({ batch: batch, name: name }); });
+    }
+    function renderReminders() {
+      if (!rem.data) return;
+      renderBatchPanel();
+      var list = filteredReminders();
+      $('m-count').textContent = list.length + ' of ' + rem.data.students.length + ' students';
+      if (!list.length) { $('m-table').innerHTML = '<div class="empty">No students match these filters.</div>'; return; }
+      $('m-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th>Unique ID</th><th>Name &amp; mobile</th><th>College</th><th>Batch</th><th>Payment</th><th>Internship reminder</th></tr></thead><tbody>' +
+        list.map(function (s) {
+          return '<tr><td class="mono">' + e(s.registrationId) + '</td>' +
+            '<td>' + e(s.fullName) + '<br><a class="muted" style="font-size:.8rem" href="tel:+91' + e(s.phone) + '">' + e(s.phone) + '</a></td>' +
+            '<td>' + e(s.college) + '</td><td>' + remBatchText(s) + '</td>' +
+            '<td>' + payCell(s) + '</td><td>' + intCell(s) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      $('m-table').querySelectorAll('[data-payrem]').forEach(function (b) { b.addEventListener('click', function () { sendPaymentReminder(b.dataset.payrem); }); });
+      $('m-table').querySelectorAll('[data-intrem]').forEach(function (b) { b.addEventListener('click', function () { openReminder({ id: b.dataset.intrem }); }); });
+    }
+    ['mq', 'm-batch', 'm-pay'].forEach(function (id) { $(id).addEventListener('input', renderReminders); });
+    function byId(id) { return rem.data.students.filter(function (s) { return s.registrationId === id; })[0]; }
+    function replaceStudent(s) {
+      rem.data.students = rem.data.students.map(function (x) { return x.registrationId === s.registrationId ? s : x; });
+    }
+    function sendPaymentReminder(id) {
+      var s = byId(id);
+      confirmBox({
+        title: 'Send payment reminder?',
+        html: 'An email with the payment link goes to <b>' + e(s.fullName) + '</b> (' + e(s.email) + ').' + (s.paymentReminders.sent ? '<br>Already sent ' + s.paymentReminders.sent + (s.paymentReminders.sent === 1 ? ' time' : ' times') + ', last on ' + P.date(s.paymentReminders.lastAt) + '.' : ''),
+        okText: 'Send reminder',
+        onConfirm: function () {
+          return P.api('/admin/students/' + encodeURIComponent(id) + '/payment-reminder', { body: {}, auth: 'admin' }).then(function (r) {
+            return r.ok ? { ok: true, student: r.data.student } : { ok: false, message: r.data.message };
+          });
+        },
+        after: function (r) { replaceStudent(r.student); renderReminders(); P.msg($('m-rem'), 'Payment reminder sent to ' + r.student.fullName + '.', 'ok'); }
+      });
+    }
+    // Remember the Zoom link / time / note per batch on this computer, so the next reminder is pre-filled
+    function remKey(from) { return 'cbi_rem_' + from; }
+    function loadExtras(from) { try { return JSON.parse(localStorage.getItem(remKey(from)) || '{}'); } catch (_) { return {}; } }
+    function saveExtras(from, x) { try { localStorage.setItem(remKey(from), JSON.stringify(x)); } catch (_) {} }
+    function openReminder(t) {
+      rem.target = t;
+      var from = t.batch ? t.batch.from : byId(t.id).from, x = loadExtras(from);
+      $('rm-zoom').value = x.zoomLink || ''; $('rm-time').value = x.sessionTime || ''; $('rm-note').value = x.note || '';
+      if (t.batch) {
+        $('rm-title').textContent = 'Send bulk Internship reminder';
+        $('rm-who').innerHTML = e(t.name) + ' starts ' + P.date(t.batch.from) + '. The email goes to the <b>' + t.batch.paid + ' paid ' + (t.batch.paid === 1 ? 'student' : 'students') + '</b> in this batch' + (t.batch.students > t.batch.paid ? ' (not to the ' + (t.batch.students - t.batch.paid) + ' who haven’t paid — send them a payment reminder)' : '') + '.';
+        $('rm-skipwrap').hidden = !t.batch.reminded; $('rm-skip').checked = true;
+        $('rm-send').textContent = 'Send to batch';
+      } else {
+        var s = byId(t.id);
+        $('rm-title').textContent = 'Send Internship reminder';
+        $('rm-who').innerHTML = 'To <b>' + e(s.fullName) + '</b> (' + e(s.email) + '). Their batch starts ' + P.date(s.from) + '.' + (s.internshipReminders.sent ? '<br>Already sent ' + s.internshipReminders.sent + (s.internshipReminders.sent === 1 ? ' time.' : ' times.') : '');
+        $('rm-skipwrap').hidden = true;
+        $('rm-send').textContent = 'Send reminder';
+      }
+      P.msg($('m-rm'), '');
+      $('remModal').classList.add('open');
+      setTimeout(function () { $('rm-zoom').focus(); }, 50);
+    }
+    $('rm-cancel').addEventListener('click', function () { $('remModal').classList.remove('open'); });
+    $('f-rem').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var t = rem.target, x = { zoomLink: $('rm-zoom').value.trim(), sessionTime: $('rm-time').value.trim(), note: $('rm-note').value.trim() };
+      if (x.zoomLink && !/^https:\/\/\S+$/i.test(x.zoomLink)) return P.msg($('m-rm'), 'The Zoom link must start with https://');
+      var from = t.batch ? t.batch.from : byId(t.id).from, btn = $('rm-send');
+      P.busy(btn, true, t.batch ? 'Sending… please keep this open' : 'Sending…');
+      var req = t.batch
+        ? P.api('/admin/reminders/internship-batch', { body: Object.assign({ from: from, skipAlreadySent: $('rm-skip').checked }, x), auth: 'admin' })
+        : P.api('/admin/students/' + encodeURIComponent(t.id) + '/internship-reminder', { body: x, auth: 'admin' });
+      req.then(function (r) {
+        P.busy(btn, false);
+        if (!r.ok) return P.msg($('m-rm'), r.data.message || 'Could not send. Please try again.');
+        saveExtras(from, x);
+        $('remModal').classList.remove('open');
+        if (t.batch) {
+          var d = r.data, parts = ['Sent ' + d.sent + ' internship ' + (d.sent === 1 ? 'reminder' : 'reminders') + ' for ' + t.name + '.'];
+          if (d.skipped) parts.push(d.skipped + ' skipped (already reminded).');
+          if (d.failed.length) parts.push(d.failed.length + ' failed: ' + d.failed.map(function (f) { return f.name; }).join(', ') + '. Try them again individually.');
+          P.msg($('m-rem'), parts.join(' '), d.failed.length ? 'err' : 'ok');
+          loadReminders();
+        } else {
+          replaceStudent(r.data.student); renderReminders();
+          P.msg($('m-rem'), 'Internship reminder sent to ' + r.data.student.fullName + '.', 'ok');
+        }
+      });
+    });
+    $('csv-reminders').addEventListener('click', function () {
+      var rows = [['Unique ID', 'Name', 'Mobile', 'Email', 'College', 'Batch', 'From', 'To', 'Payment', 'Payment reminders sent', 'Last payment reminder', 'Internship reminders sent', 'Last internship reminder']];
+      filteredReminders().forEach(function (s) {
+        rows.push([s.registrationId, s.fullName, s.phone, s.email, s.college, s.dateMode === 'later' ? 'Not chosen' : s.dateMode === 'custom' ? 'Custom' : s.batchNumber, s.from, s.to,
+          s.paymentDone === 'Yes' ? (s.paymentMode === 'test' ? 'Demo paid' : 'Paid') : 'Not paid', s.paymentReminders.sent, s.paymentReminders.lastAt, s.internshipReminders.sent, s.internshipReminders.lastAt]);
+      });
+      download('internship-reminders.csv', csv(rows));
     });
 
     // ---------- Boot ----------

@@ -943,3 +943,16 @@ section:has(> .legal) { padding-bottom: 80px; }
 /* Payment gateway not live yet */
 .pay-soon { display: block; padding: 12px 14px; border-radius: 12px; background: rgba(0, 194, 255, .08); border: 1px solid rgba(0, 194, 255, .25); color: var(--text); line-height: 1.5; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+/* Admin: Reminders tab */
+.rem-tbl td { vertical-align: top; }
+.rem-tbl .btn-sm { white-space: nowrap; }
+.rem-meta { margin-top: 6px; font-size: .78rem; line-height: 1.45; color: var(--text); }
+.rem-meta .muted { font-size: .78rem; }
+.rem-batch { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 18px; margin-bottom: 16px; border-radius: 16px; background: rgba(0,194,255,.06); border: 1px solid rgba(0,194,255,.25); }
+.rem-batch strong { display: block; font-size: 1rem; margin-bottom: 2px; }
+.rem-batch .muted { font-size: .85rem; }
+.rem-batch-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.check-row { display: flex; gap: 10px; align-items: center; margin: 4px 0 16px; font-size: .9rem; cursor: pointer; }
+.check-row input { width: 18px; height: 18px; accent-color: var(--brand); }
+#m-batch { padding-right: 38px; min-width: 250px; }
