@@ -15,7 +15,7 @@
     // Keep in sync with internship/index.html and INTERNSHIP_BATCHES in the API's deploy.ps1
     batches: ['2026-11-16', '2026-11-23', '2026-11-30', '2026-12-07', '2026-12-14',
               '2026-12-21', '2026-12-28', '2027-01-04', '2027-01-11'],
-    feeInr: 1999,                // fallbacks only: the live prices come from the API (/pricing)
+    feeInr: 2000,                // fallbacks only: the live prices come from the API (/pricing)
     hardcopyFeeInr: 150,         // optional printed certificate, courier included
     referralRewardInr: 100,      // cashback per referred student who pays (keep in sync with the API)
     paymentsEnabled: false       // false = Pay button disabled with a "payment window will be enabled soon" note (set true when Razorpay is ready)

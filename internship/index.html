@@ -64,6 +64,13 @@
             <span class="line"><span>Program</span></span>
           </h1>
           <p class="hero-sub">A two-week virtual internship to learn programming, system design and the basics of AI — and to write real code, live on Zoom, with engineers who ship software every day.</p>
+          <div class="hero-price" aria-label="Program fee">
+            <div class="hp-amount"><span class="hp-cur">&#8377;</span><span data-fee>2,000</span></div>
+            <div class="hp-text">
+              <strong>One-time program fee</strong>
+              <span>Live classes, project review &amp; certificate included</span>
+            </div>
+          </div>
           <div class="hero-actions">
             <a href="register.html" class="btn btn-primary btn-lg">
               Register for internship
@@ -187,6 +194,29 @@
     </section>
 
     <!-- ===== CURRICULUM ===== -->
+    <!-- ===== FEE ===== -->
+    <section class="section" id="fee" style="padding-top:0">
+      <div class="container">
+        <div class="fee-card reveal">
+          <div class="fee-left">
+            <span class="eyebrow">Program fee</span>
+            <h2>One simple price.<br /><span class="grad">Everything included.</span></h2>
+            <div class="fee-amount"><span class="fee-cur">&#8377;</span><span data-fee>2,000</span><span class="fee-once">one-time</span></div>
+            <p class="fee-note">Want a printed certificate couriered home? Add it for <b>&#8377;<span data-hardcopy>150</span></b> while you register &mdash; it&rsquo;s optional.</p>
+            <a href="register.html" class="btn btn-primary btn-lg">Register for internship</a>
+          </div>
+          <ul class="fee-list">
+            <li><span class="tick"></span><span>3 live classes on Zoom: coding &amp; OOP, system design, AI basics</span></li>
+            <li><span class="tick"></span><span>Your own project, built and published on GitHub</span></li>
+            <li><span class="tick"></span><span>Doubt support from engineers during the internship</span></li>
+            <li><span class="tick"></span><span>Project review with feedback, plus a closing session</span></li>
+            <li><span class="tick"></span><span>CodeBuzz AI internship certificate</span></li>
+            <li><span class="tick"></span><span>Earn &#8377;<span data-reward>100</span> cashback for every friend who joins with your code</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="curriculum" style="padding-top:0">
       <div class="container">
         <div class="section-head reveal">
@@ -449,6 +479,10 @@
         </div>
         <div class="faq reveal">
           <details>
+            <summary>How much does the internship cost?<span class="pm"></span></summary>
+            <p>The program fee is <b>&#8377;<span data-fee>2,000</span></b>, paid once. It covers the live classes, doubt support, project review and your certificate. A printed certificate couriered to your home is optional, for &#8377;<span data-hardcopy>150</span> more.</p>
+          </details>
+          <details>
             <summary>Who can apply?<span class="pm"></span></summary>
             <p>College students from any year of a diploma, undergraduate or postgraduate program can register. No prior coding experience is needed.</p>
           </details>
@@ -514,7 +548,7 @@
         <div class="cta-block reveal">
           <span class="eyebrow">Two weeks that move you forward</span>
           <h2>Ready to start<br /><span class="grad">building?</span></h2>
-          <p>Registration takes about two minutes. Pick your dates, fill in your details and secure your spot.</p>
+          <p>Registration takes about two minutes. Pick your dates, fill in your details and secure your spot for <b style="color:var(--text)">&#8377;<span data-fee>2,000</span></b>.</p>
           <a href="register.html" class="btn btn-register">
             Register for internship
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -527,7 +561,7 @@
   </main>
 
   <div class="sticky-cta" id="stickyCta">
-    <a href="register.html" class="btn btn-primary btn-lg">Register for internship</a>
+    <a href="register.html" class="btn btn-primary btn-lg"><span>Register for internship &middot; &#8377;<span data-fee>2,000</span></span></a>
   </div>
 
   <footer class="footer" style="margin-top:0">
@@ -538,7 +572,23 @@
   </footer>
 
   <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
   <script src="assets/common.js"></script>
   <script src="assets/landing.js"></script>
+  <script>
+  // Show the live fee from the API (the HTML already says ₹2,000, so nothing flashes while it loads)
+  (function () {
+    var CFG = window.CB_INTERNSHIP || {};
+    function put(attr, n) {
+      if (typeof n !== 'number' || !(n > 0)) return;
+      document.querySelectorAll('[' + attr + ']').forEach(function (el) { el.textContent = n.toLocaleString('en-IN'); });
+    }
+    if (!CFG.apiBase || !window.fetch) return;
+    fetch(CFG.apiBase + '/api/internship/pricing').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      put('data-fee', d.feeInr); put('data-hardcopy', d.hardcopyFeeInr); put('data-reward', d.referralRewardInr);
+    }).catch(function () {});
+  })();
+  </script>
 </body>
 </html>

@@ -52,7 +52,7 @@
   /* ---------- Helper for custom events ---------- */
   // cbTrack('Purchase', { value: 2149, currency: 'INR' }, { eventID: 'pay_123' })
   window.cbTrack = function (event, props, metaOptions) {
-    var standard = /^(PageView|ViewContent|Search|AddToCart|AddToWishlist|InitiateCheckout|AddPaymentInfo|Purchase|Lead|CompleteRegistration|Contact|Subscribe|StartTrial)$/;
+    var standard = /^(PageView|ViewContent|Search|AddToCart|AddToWishlist|InitiateCheckout|AddPaymentInfo|Purchase|Lead|CompleteRegistration|Contact|Subscribe|StartTrial|SubmitApplication)$/;
     try { if (window.fbq) fbq(standard.test(event) ? 'track' : 'trackCustom', event, props || {}, metaOptions || {}); } catch (_) {}
     try { if (window.posthog && posthog.capture) posthog.capture(event, props || {}); } catch (_) {}
     try {
