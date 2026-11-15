@@ -160,7 +160,7 @@
         <p class="muted" id="m-count" style="font-size:.85rem;margin-bottom:10px"></p>
         <div class="rem-bulk" id="m-bulkbar" hidden></div>
         <div class="table-wrap" id="m-table"></div>
-        <p class="muted" style="font-size:.8rem;margin-top:12px">Internship reminders can be sent to paid students in the 7 days before their batch starts. Every reminder sent is counted here.</p>
+        <p class="muted" style="font-size:.8rem;margin-top:12px">Internship reminders can be sent to paid students in the 7 days before their batch starts. Every reminder sent is counted here. Tick students and choose <b>Enable Certificate</b> once they complete the program; to disable one, use the Students tab.</p>
       </section>
     </div>
   </main>
@@ -387,13 +387,13 @@
         var on = !!state.sel[s.registrationId];
         return '<td class="chk"><input type="checkbox" data-sel="' + e(s.registrationId) + '"' + (on ? ' checked' : '') + ' aria-label="Select ' + e(s.fullName) + '" /></td>';
       }
-      $('s-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th class="chk"><input type="checkbox" id="s-all" aria-label="Select all students shown" /></th><th>Unique ID</th><th>Name</th><th>College</th><th>Batch</th><th>Payment</th><th>Referred by</th><th class="num">Referred</th><th class="num">Cashback due</th></tr></thead><tbody>' +
+      $('s-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th class="chk"><input type="checkbox" id="s-all" aria-label="Select all students shown" /></th><th>Unique ID</th><th>Name</th><th>College</th><th>Batch</th><th>Payment</th><th class="ctr">Certificate enabled</th><th>Referred by</th><th class="num">Referred</th><th class="num">Cashback due</th></tr></thead><tbody>' +
         list.map(function (s) {
           if (isAmb(s)) {
             return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="chk"></td><td class="mono">' + e(s.registrationId) + '</td>' +
               '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
               '<td>' + AMB_TAG + '<br><span class="muted" style="font-size:.8rem">' + e(s.email) + '</span></td>' +
-              '<td><span class="muted">—</span></td><td><span class="muted">No fee</span></td><td><span class="muted">—</span></td>' +
+              '<td><span class="muted">—</span></td><td><span class="muted">No fee</span></td>' + certCell(false) + '<td><span class="muted">—</span></td>' +
               '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
               '<td class="num">' + cashCell(s) + '</td></tr>';
           }
@@ -401,8 +401,7 @@
             '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
             '<td>' + e(s.college) + '<br><span class="muted" style="font-size:.8rem">' + e(s.degree) + ' · Yr ' + s.collegeYear + '</span></td>' +
             '<td>' + batchText(s) + (s.from ? '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span>' : '') + '</td>' +
-            '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') +
-              (s.certificateEnabled ? '<br><span class="tag green" style="margin-top:4px">Certificate enabled</span>' : '') + '</td>' +
+            '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') + '</td>' + certCell(s.certificateEnabled) +
             '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
             '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
             '<td class="num">' + cashCell(s) + '</td></tr>';
@@ -429,6 +428,10 @@
     }
 
     // ---------- Certificates: enable / disable for one student or the ticked students ----------
+    // "Certificate enabled" column (Students and Reminders tables): a green tick once it is enabled
+    function certCell(on) {
+      return '<td class="ctr">' + (on ? '<span class="cert-tick" title="Certificate enabled" aria-label="Certificate enabled">\u2713</span>' : '<span class="muted" aria-label="Not enabled">—</span>') + '</td>';
+    }
     // A certificate can be enabled for a paid student (not an ambassador) with a confirmed batch.
     // Same rule as the API: a demo (test-mode) payment counts only while real payments aren't switched on yet.
     function canCertify(s) {
@@ -460,8 +463,9 @@
       if (has) $('sb-disable').addEventListener('click', function () { setCertificates(sel, false); });
       $('sb-clear').addEventListener('click', function () { state.sel = {}; renderStudents(); });
     }
-    // list: students to change; enabled: true = enable, false = disable. after(): optional extra refresh (the drawer)
-    function setCertificates(list, enabled, after) {
+    // list: students to change; enabled: true = enable, false = disable. after(): optional extra refresh (the drawer).
+    // msgEl: where the result is shown (the Reminders tab passes its own message line)
+    function setCertificates(list, enabled, after, msgEl) {
       var go = list.filter(function (x) { return enabled ? canCertify(x) && !x.certificateEnabled : x.certificateEnabled; });
       var skip = list.length - go.length, one = go.length === 1, who = one ? e(go[0].fullName) : go.length + ' students';
       if (!go.length) return;
@@ -484,8 +488,8 @@
           var d = r.data || {}, done = (d.updated || []).length, skipped = d.skipped || [];
           var parts = ['Certificate ' + (enabled ? 'enabled' : 'disabled') + ' for ' + done + (done === 1 ? ' student.' : ' students.')];
           if (skipped.length) parts.push(skipped.length + ' skipped (' + Object.keys(countBy(skipped, function (x) { return x.reason; })).map(function (k) { return CERT_SKIP[k] || k; }).join(', ') + ').');
-          state.sel = {};
-          P.msg($('m-cert'), parts.join(' '), skipped.length && !done ? 'err' : 'ok');
+          state.sel = {}; rem.sel = {};
+          P.msg(msgEl || $('m-cert'), parts.join(' '), skipped.length && !done ? 'err' : 'ok');
           loadAll();
           if (after) after();
         }
@@ -962,13 +966,13 @@
       Object.keys(rem.sel).forEach(function (id) { if (!shown[id]) delete rem.sel[id]; });
       $('m-count').textContent = list.length + ' of ' + rem.data.students.length + ' students';
       if (!list.length) { $('m-table').innerHTML = '<div class="empty">No students match these filters.</div>'; updateBulkBar(); return; }
-      $('m-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th class="chk"><input type="checkbox" id="m-all" aria-label="Select all students shown" /></th><th>Unique ID</th><th>Name &amp; mobile</th><th>College</th><th>Batch</th><th>Payment</th><th>Internship reminder</th></tr></thead><tbody>' +
+      $('m-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th class="chk"><input type="checkbox" id="m-all" aria-label="Select all students shown" /></th><th>Unique ID</th><th>Name &amp; mobile</th><th>College</th><th>Batch</th><th>Payment</th><th>Internship reminder</th><th class="ctr">Certificate enabled</th></tr></thead><tbody>' +
         list.map(function (s) {
           var on = !!rem.sel[s.registrationId];
           return '<tr' + (on ? ' class="is-sel"' : '') + '><td class="chk"><input type="checkbox" data-sel="' + e(s.registrationId) + '"' + (on ? ' checked' : '') + ' aria-label="Select ' + e(s.fullName) + '" /></td><td class="mono">' + e(s.registrationId) + '</td>' +
             '<td>' + e(s.fullName) + '<br><a class="muted" style="font-size:.8rem" href="tel:+91' + e(s.phone) + '">' + e(s.phone) + '</a></td>' +
             '<td>' + e(s.college) + '</td><td>' + remBatchText(s) + '</td>' +
-            '<td>' + payCell(s) + '</td><td>' + intCell(s) + '</td></tr>';
+            '<td>' + payCell(s) + '</td><td>' + intCell(s) + '</td>' + certCell((certStudent(s) || {}).certificateEnabled) + '</tr>';
         }).join('') + '</tbody></table>';
       $('m-table').querySelectorAll('[data-payrem]').forEach(function (b) { b.addEventListener('click', function () { sendPaymentReminder(b.dataset.payrem); }); });
       $('m-table').querySelectorAll('[data-intrem]').forEach(function (b) { b.addEventListener('click', function () { openReminder({ id: b.dataset.intrem }); }); });
@@ -995,6 +999,8 @@
       not_yet: 'batch is more than 7 days away', already_reminded: 'already reminded'
     };
     function selectedStudents() { return rem.data.students.filter(function (x) { return rem.sel[x.registrationId]; }); }
+    // The same student in the Students list, which carries the certificate details
+    function certStudent(x) { return state.students.filter(function (y) { return y.registrationId === x.registrationId; })[0]; }
     function countBy(list, key) {
       var out = {}; list.forEach(function (x) { var k = key(x); if (k) out[k] = (out[k] || 0) + 1; }); return out;
     }
@@ -1011,14 +1017,18 @@
       if (!sel.length) { bar.hidden = true; bar.innerHTML = ''; return; }
       var pay = sel.filter(function (x) { return x.paymentDone !== 'Yes'; }).length;
       var intr = sel.filter(function (x) { return x.internshipReminder.allowed; }).length;
-      bar.innerHTML = '<div><strong>' + sel.length + ' selected</strong><span class="muted">' + pay + ' can get a payment reminder \u00b7 ' + intr + ' can get an internship reminder now</span></div>' +
+      var certList = sel.map(certStudent).filter(Boolean);
+      var cert = certList.filter(function (x) { return canCertify(x) && !x.certificateEnabled; }).length;
+      bar.innerHTML = '<div><strong>' + sel.length + ' selected</strong><span class="muted">' + pay + ' can get a payment reminder \u00b7 ' + intr + ' can get an internship reminder now \u00b7 ' + cert + ' can get a certificate</span></div>' +
         '<div class="rem-bulk-act">' +
         '<button class="btn btn-primary btn-sm" type="button" id="mb-pay"' + (pay ? '' : ' disabled') + '>Send payment reminder (' + pay + ')</button>' +
         '<button class="btn btn-primary btn-sm" type="button" id="mb-int"' + (intr ? '' : ' disabled') + '>Send Internship reminder (' + intr + ')</button>' +
+        '<button class="btn btn-primary btn-sm" type="button" id="mb-cert"' + (cert ? '' : ' disabled') + '>Enable Certificate (' + cert + ')</button>' +
         '<button class="btn btn-ghost btn-sm" type="button" id="mb-clear">Clear</button></div>';
       bar.hidden = false;
       $('mb-pay').addEventListener('click', bulkPayment);
       $('mb-int').addEventListener('click', function () { openReminder({ ids: sel.map(function (x) { return x.registrationId; }) }); });
+      $('mb-cert').addEventListener('click', function () { setCertificates(certList, true, null, $('m-rem')); });
       $('mb-clear').addEventListener('click', function () { rem.sel = {}; renderReminders(); });
     }
     function bulkResultText(d, what) {
@@ -1139,10 +1149,10 @@
       });
     });
     $('csv-reminders').addEventListener('click', function () {
-      var rows = [['Unique ID', 'Name', 'Mobile', 'Email', 'College', 'Batch', 'From', 'To', 'Payment', 'Payment reminders sent', 'Last payment reminder', 'Internship reminders sent', 'Last internship reminder']];
+      var rows = [['Unique ID', 'Name', 'Mobile', 'Email', 'College', 'Batch', 'From', 'To', 'Payment', 'Payment reminders sent', 'Last payment reminder', 'Internship reminders sent', 'Last internship reminder', 'Certificate enabled']];
       filteredReminders().forEach(function (s) {
         rows.push([s.registrationId, s.fullName, s.phone, s.email, s.college, s.dateMode === 'later' ? 'Not chosen' : s.dateMode === 'custom' ? 'Custom' : s.batchNumber, s.from, s.to,
-          s.paymentDone === 'Yes' ? (s.paymentMode === 'test' ? 'Demo paid' : 'Paid') : 'Not paid', s.paymentReminders.sent, s.paymentReminders.lastAt, s.internshipReminders.sent, s.internshipReminders.lastAt]);
+          s.paymentDone === 'Yes' ? (s.paymentMode === 'test' ? 'Demo paid' : 'Paid') : 'Not paid', s.paymentReminders.sent, s.paymentReminders.lastAt, s.internshipReminders.sent, s.internshipReminders.lastAt, (certStudent(s) || {}).certificateEnabled ? 'Yes' : 'No']);
       });
       download('internship-reminders.csv', csv(rows));
     });

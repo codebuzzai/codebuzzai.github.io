@@ -1010,3 +1010,6 @@ section:has(> .legal) { padding-bottom: 80px; }
 .verify-ok span { color: var(--muted); font-size: .84rem; }
 .verify-tick { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 50%; background: rgba(46,229,157,.14); color: var(--green) !important; font-size: 1.05rem !important; font-weight: 700; }
 .cert-card h2 .tag { margin-left: 0; }
+.tbl th.ctr, .tbl td.ctr { text-align: center; }
+.cert-tick { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(46,229,157,.14); color: var(--green); font-size: .85rem; font-weight: 700; }
+.tbl th.ctr { white-space: normal; width: 104px; line-height: 1.35; }
