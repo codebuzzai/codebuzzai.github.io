@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify a Certificate · CodeBuzz AI Internship Program</title>
+  <meta name="description" content="Check that a CodeBuzz AI Internship Program certificate is genuine by entering its Unique ID." />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Analytics: PostHog + Meta Pixel + Google Analytics 4 (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <a href="./" class="btn btn-ghost btn-sm">Internship program</a>
+    </div>
+  </nav>
+
+  <main class="auth-wrap">
+    <div class="auth-card verify-card">
+      <span class="eyebrow">Certificate verification</span>
+      <h1>Verify a certificate</h1>
+      <p class="sub">Enter the student’s Unique ID printed on a CodeBuzz AI Internship Program certificate to confirm it is genuine.</p>
+      <form id="f-verify" novalidate>
+        <div class="field">
+          <label for="cid">Unique ID</label>
+          <input class="ctrl" id="cid" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="e.g. CBI26-7K4QMX" style="font-family:var(--font-m);text-transform:uppercase" />
+        </div>
+        <button class="btn btn-primary" type="submit">Verify</button>
+      </form>
+      <div class="msg" id="m" role="alert"></div>
+      <div class="verify-result" id="result" hidden></div>
+    </div>
+  </main>
+
+  <footer class="footer" style="margin-top:60px">
+    <div class="container">
+      <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <span><a href="terms.html">Terms</a> · Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+    </div>
+  </footer>
+
+  <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/portal.js"></script>
+  <script src="assets/certificate.js"></script>
+  <script>
+  (function () {
+    var P = window.Portal, C = window.CBCertificate, $ = function (x) { return document.getElementById(x); }, e = P.esc;
+    var form = $('f-verify'), btn = form.querySelector('button[type=submit]');
+
+    function row(label, value) { return value ? '<dt>' + e(label) + '</dt><dd>' + e(value) + '</dd>' : ''; }
+    function verify(id) {
+      P.msg($('m'), ''); $('result').hidden = true;
+      id = id.trim().toUpperCase();
+      if (id.length < 4) return P.msg($('m'), 'Enter the Unique ID printed on the certificate.');
+      P.busy(btn, true, 'Checking\u2026');
+      P.api('/certificates/verify/' + encodeURIComponent(id)).then(function (r) {
+        P.busy(btn, false);
+        if (r.status === 404 || (r.ok && !r.data.valid)) {
+          return P.msg($('m'), 'No certificate was found with the ID ' + id + '. Check the ID and try again. If it still doesn\u2019t match, this certificate was not issued by CodeBuzz.ai.');
+        }
+        if (!r.ok) return P.msg($('m'), r.data.message || 'Could not check this certificate right now. Please try again.');
+        var c = r.data.certificate;
+        $('result').innerHTML =
+          '<div class="verify-ok"><span class="verify-tick" aria-hidden="true">\u2713</span><div><strong>Verified certificate</strong><span>Issued by CodeBuzz.ai</span></div></div>' +
+          '<dl class="kv">' +
+          row('Name', c.fullName) + row('College', c.college) +
+          row('Program', c.program || P.CFG.certificate.program) +
+          row('Internship period', C.longDate(c.from) + ' \u2013 ' + C.longDate(c.to)) +
+          row('Unique ID', c.certificateId) + row('Issued on', C.longDate(c.issuedOn)) +
+          '</dl>';
+        $('result').hidden = false;
+      });
+    }
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); verify($('cid').value); });
+
+    // Links like verify.html?id=XXXX check straight away
+    var m = /[?&]id=([^&]+)/.exec(location.search);
+    if (m) { $('cid').value = decodeURIComponent(m[1]).toUpperCase(); verify($('cid').value); }
+  })();
+  </script>
+</body>
+</html>

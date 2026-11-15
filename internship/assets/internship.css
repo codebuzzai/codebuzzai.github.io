@@ -935,9 +935,10 @@ section:has(> .legal) { padding-bottom: 80px; }
 
 /* Nav: keep link labels on one line next to the longer "Register for internship" button */
 .nav-links a, .nav-actions .btn { white-space: nowrap; }
-@media (max-width: 1440px) { .nav-links { gap: 24px; } .nav-links li:nth-child(3) { display: none; } }
+/* Seven links since "Verify certificate" was added: "Two weeks" stays out of the bar so the rest fit the 1160px container */
+.nav-links { gap: 24px; } .nav-links li:nth-child(3) { display: none; }
 @media (max-width: 1200px) { .nav-links li:nth-child(1) { display: none; } }
-@media (max-width: 1060px) { .nav-links { display: none; } }
+@media (max-width: 1080px) { .nav-links { display: none; } }
 @media (max-width: 640px) { .nav-full { display: none; } }
 
 /* Payment gateway not live yet */
@@ -991,3 +992,21 @@ section:has(> .legal) { padding-bottom: 80px; }
 .rem-bulk strong { display: block; }
 .rem-bulk .muted { font-size: .82rem; }
 .rem-bulk-act { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ================= CERTIFICATE ================= */
+.cert-page { max-width: 1040px; }
+.cert-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.cert-frame { border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 40px 100px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06); }
+.cert-frame canvas { display: block; width: 100%; height: auto; }
+.cert-note { font-size: .86rem; margin-top: 18px; text-align: center; }
+.cert-note a { color: var(--brand); }
+.cert-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.cert-card h2 { margin-bottom: 6px; }
+.cert-card p { color: var(--muted); font-size: .92rem; }
+.verify-card { max-width: 500px; }
+.verify-result { margin-top: 22px; padding: 22px; border-radius: 16px; background: var(--bg); border: 1px solid rgba(46,229,157,.35); }
+.verify-ok { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.verify-ok strong { display: block; color: var(--green); }
+.verify-ok span { color: var(--muted); font-size: .84rem; }
+.verify-tick { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 50%; background: rgba(46,229,157,.14); color: var(--green) !important; font-size: 1.05rem !important; font-weight: 700; }
+.cert-card h2 .tag { margin-left: 0; }

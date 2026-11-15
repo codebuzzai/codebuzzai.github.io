@@ -46,6 +46,15 @@
           </div>
         </div>
 
+        <!-- Certificate: shown once an admin enables it -->
+        <div class="card wide cert-card" id="certCard" hidden>
+          <div>
+            <h2>Your certificate is ready <span class="tag green">Completed</span></h2>
+            <p>Congratulations on completing the program. Unique ID: <span class="mono" id="certId"></span></p>
+          </div>
+          <a class="btn btn-primary" href="certificate.html">Download Certificate</a>
+        </div>
+
         <!-- Referral code -->
         <!-- "Choose date later": pick a batch -->
         <div class="card wide choose-card" id="chooseCard" hidden>
@@ -138,7 +147,7 @@
   <footer class="footer" style="margin-top:60px">
     <div class="container">
       <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
-      <span><a href="terms.html">Terms</a> · Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+      <span><a href="terms.html">Terms</a> · <a href="verify.html">Verify certificate</a> · Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
     </div>
   </footer>
 
@@ -286,6 +295,10 @@
         return;
       }
 
+      // Certificate (enabled by an admin after the program is completed)
+      var cert = d.certificate || {};
+      if (cert.enabled) { $('certId').textContent = cert.certificateId || ''; $('certCard').hidden = false; }
+
       // Summary
       var st = STATE[i.state] || STATE.unknown;
       $('st-intern').textContent = st[0];
@@ -306,7 +319,8 @@
         later ? null : ['To', P.date(i.to)],
         ['Duration', '2 weeks'],
         ['Mode', 'Virtual · live on Zoom'],
-        ['Certificate', p.price && p.price.certificateHardcopy ? 'Digital + printed hard copy (courier)' : 'Digital']
+        ['Certificate', (p.price && p.price.certificateHardcopy ? 'Digital + printed hard copy (courier)' : 'Digital') +
+          (cert.enabled ? ' \u00b7 <a href="certificate.html" style="color:var(--brand)">Download Certificate</a>' : ' <span class="muted">\u00b7 available after you complete the program</span>'), true]
       ]);
 
       // Payment

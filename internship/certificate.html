@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Certificate · CodeBuzz AI Internship Program</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0D1117" />
+  <link rel="icon" type="image/png" href="../assets/images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/internship.css" />
+  <!-- Analytics: PostHog + Meta Pixel + Google Analytics 4 (assets/js/analytics.js) -->
+  <script src="/assets/js/analytics.js"></script>
+  <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1393333359453502&ev=PageView&noscript=1"/></noscript>
+</head>
+<body>
+  <div class="fx" aria-hidden="true"><div class="grid-bg"></div><div class="orb o1"></div><div class="orb o2"></div></div>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="../" class="logo" aria-label="CodeBuzz.ai home"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <a href="dashboard.html" class="btn btn-ghost btn-sm" id="back">Back to my internship</a>
+    </div>
+  </nav>
+
+  <main class="portal">
+    <div class="container cert-page">
+      <div class="portal-head">
+        <div>
+          <span class="eyebrow" id="eyebrow">Certificate</span>
+          <h1 id="title">Loading your certificate&hellip;</h1>
+          <p id="sub"></p>
+        </div>
+        <div class="cert-actions" id="actions" hidden>
+          <button class="btn btn-primary" type="button" id="dlPdf">Download Certificate (PDF)</button>
+          <button class="btn btn-ghost" type="button" id="dlPng">Download as image</button>
+        </div>
+      </div>
+      <div class="msg" id="m" role="alert"></div>
+      <div class="cert-frame" id="frame" hidden><canvas id="cert" aria-label="Certificate preview"></canvas></div>
+      <p class="muted cert-note" id="note" hidden></p>
+    </div>
+  </main>
+
+  <footer class="footer" style="margin-top:60px">
+    <div class="container">
+      <a href="../" class="logo"><div class="logo-badge">CB</div><span>CodeBuzz<span class="accent">.ai</span></span></a>
+      <span><a href="terms.html">Terms</a> · <a href="verify.html">Verify certificate</a> · Need help? <a href="mailto:info@codebuzz.ai">info@codebuzz.ai</a></span>
+    </div>
+  </footer>
+
+  <script src="../assets/js/site-protect.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/common.js"></script>
+  <script src="assets/portal.js"></script>
+  <script src="assets/certificate.js"></script>
+  <script>
+  (function () {
+    var P = window.Portal, C = window.CBCertificate, $ = function (x) { return document.getElementById(x); };
+    var sample = /[?&]sample=1/.test(location.search);
+
+    function show(data) {
+      $('title').textContent = sample ? 'Certificate template' : 'Your certificate';
+      $('sub').textContent = sample ? 'A sample with placeholder details. Real certificates carry the student\u2019s name, internship period and Unique ID.'
+        : 'Unique ID: ' + data.certificateId;
+      $('frame').hidden = false;
+      C.draw($('cert'), data, 2246).then(function () {
+        $('actions').hidden = false;
+        $('note').hidden = false;
+        $('note').innerHTML = 'Anyone can confirm this certificate at <a href="verify.html?id=' + encodeURIComponent(data.certificateId) + '">' + P.esc(P.CFG.certificate.verifyUrl) + '</a> using the Unique ID.';
+      });
+      function wire(btn, fn, label) {
+        btn.addEventListener('click', function () {
+          P.busy(btn, true, 'Preparing\u2026');
+          fn(data).then(function () { P.busy(btn, false); }, function () {
+            P.busy(btn, false);
+            P.msg($('m'), 'Could not create the ' + label + ' on this device. Please try again in Chrome on a computer.');
+          });
+        });
+      }
+      wire($('dlPdf'), C.downloadPdf, 'PDF');
+      wire($('dlPng'), C.downloadPng, 'image');
+    }
+
+    if (sample) {
+      $('back').hidden = true;
+      show({ fullName: 'Student Name', college: 'Name of the College', from: P.CFG.batches[0], to: '2026-11-29',
+        certificateId: 'CBI26-SAMPLE', issuedOn: '2026-11-29', sample: true });
+      return;
+    }
+    if (!P.token('student')) { location.replace('login.html'); return; }
+
+    P.api('/student/me', { auth: 'student' }).then(function (r) {
+      if (r.status === 402 && r.data.paymentRequired) { location.replace('payment.html?id=' + encodeURIComponent(r.data.registrationId)); return; }
+      if (!r.ok) { $('title').textContent = 'Certificate'; return P.msg($('m'), r.data.message || 'Could not load your certificate.'); }
+      var d = r.data, cert = d.certificate || {};
+      if (!cert.enabled) {
+        $('title').textContent = 'Not available yet';
+        $('sub').textContent = 'Your certificate appears here once you complete the program and the CodeBuzz.ai team enables it.';
+        return;
+      }
+      show({ fullName: d.student.fullName, college: d.student.college, from: d.internship.from, to: d.internship.to,
+        certificateId: cert.certificateId, issuedOn: cert.issuedOn });
+    });
+  })();
+  </script>
+</body>
+</html>

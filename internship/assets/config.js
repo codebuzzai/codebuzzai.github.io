@@ -18,6 +18,15 @@
     feeInr: 2000,                // fallbacks only: the live prices come from the API (/pricing)
     hardcopyFeeInr: 150,         // optional printed certificate, courier included
     referralRewardInr: 100,      // cashback per referred student who pays (keep in sync with the API)
-    paymentsEnabled: false       // false = Pay button disabled with a "payment window will be enabled soon" note (set true when Razorpay is ready)
+    paymentsEnabled: false,      // false = Pay button disabled with a "payment window will be enabled soon" note (set true when Razorpay is ready)
+    // Certificate template (assets/certificate.js). Students download it once an admin enables it.
+    certificate: {
+      program: 'CodeBuzz AI Internship Program',
+      description: 'a two-week virtual internship covering programming fundamentals, system design and the basics of AI, completed with a hands-on project.',
+      signatoryName: '',                             // no person's name on the certificate: it is issued by CodeBuzz.ai
+      signatoryTitle: 'CodeBuzz.ai',                 // printed bottom-left under "Issued by"
+      signatureImage: '',                            // optional: path to a transparent PNG of the signature, e.g. 'assets/signature.png'
+      verifyUrl: 'codebuzz.ai/internship/verify'     // printed in small type on every certificate
+    }
   };
 })();

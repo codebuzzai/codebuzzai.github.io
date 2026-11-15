@@ -118,11 +118,14 @@
           <select class="ctrl" id="f-pay"><option value="">Any payment</option><option value="Yes">Paid (real)</option><option value="Demo">Demo paid</option><option value="No">Not paid</option></select>
           <select class="ctrl" id="f-ref"><option value="">Any referral</option><option value="referred">Was referred</option><option value="referrer">Has referred others</option></select>
           <select class="ctrl" id="f-src"><option value="">Any source</option><option value="ambassador">Student Ambassador</option><option value="student_referral">Friend / student referral</option><option value="pamphlet">Pamphlet / poster</option><option value="social_media">Social media</option><option value="ads">Online ad</option><option value="other">Other</option></select>
-          <select class="ctrl" id="f-hc"><option value="">Any certificate</option><option value="yes">Hard copy requested</option></select>
+          <select class="ctrl" id="f-hc"><option value="">Any certificate</option><option value="yes">Hard copy requested</option><option value="enabled">Certificate enabled</option><option value="ready">Certificate not enabled yet (paid)</option></select>
           <button class="btn btn-ghost btn-sm" id="csv-students" type="button">Export CSV</button>
         </div>
         <p class="muted" id="s-count" style="font-size:.85rem;margin-bottom:10px"></p>
+        <div class="msg" id="m-cert" role="status"></div>
+        <div class="rem-bulk" id="s-bulkbar" hidden></div>
         <div class="table-wrap" id="s-table"></div>
+        <p class="muted" style="font-size:.8rem;margin-top:12px">Tick students and choose <b>Enable Certificate</b> to let them download their certificate from the student portal. Certificates can be enabled for paid students with a confirmed batch. <a href="certificate.html?sample=1" target="_blank" rel="noopener" style="color:var(--brand)">Preview the certificate template</a></p>
       </section>
 
       <!-- Cashback -->
@@ -237,7 +240,7 @@
   <script>
   (function () {
     var P = window.Portal, $ = function (x) { return document.getElementById(x); }, e = P.esc;
-    var state = { overview: null, students: [], rewards: [], payTarget: null };
+    var state = { overview: null, students: [], rewards: [], payTarget: null, sel: {} };   // sel: registration IDs ticked in the Students table
     P.wirePasswordToggles();
 
     function show(view) {
@@ -360,6 +363,8 @@
         var src = $('f-src').value, hcf = $('f-hc').value;
         if (src && s.heardFrom !== src) return false;
         if (hcf === 'yes' && !s.certificateHardcopy) return false;
+        if (hcf === 'enabled' && !s.certificateEnabled) return false;
+        if (hcf === 'ready' && !(canCertify(s) && !s.certificateEnabled)) return false;
         if (q) {
           var hay = [s.registrationId, s.fullName, s.email, s.phone, s.college, s.referralCode, s.heardFromOther, s.referredBy && s.referredBy.name, s.referredBy && s.referredBy.code].join(' ').toLowerCase();
           if (hay.indexOf(q) < 0) return false;
@@ -374,27 +379,117 @@
       var list = filteredStudents();
       var nAmb = state.students.filter(isAmb).length;
       $('s-count').textContent = list.length + ' of ' + state.students.length + ' (' + (state.students.length - nAmb) + ' students, ' + nAmb + ' ambassadors)';
-      if (!list.length) { $('s-table').innerHTML = '<div class="empty">No students match these filters.</div>'; return; }
-      $('s-table').innerHTML = '<table class="tbl"><thead><tr><th>Unique ID</th><th>Name</th><th>College</th><th>Batch</th><th>Payment</th><th>Referred by</th><th class="num">Referred</th><th class="num">Cashback due</th></tr></thead><tbody>' +
+      // Only students shown on screen can stay selected, so a hidden student never gets a certificate by mistake
+      var shown = {}; list.forEach(function (x) { shown[x.registrationId] = true; });
+      Object.keys(state.sel).forEach(function (id) { if (!shown[id]) delete state.sel[id]; });
+      if (!list.length) { $('s-table').innerHTML = '<div class="empty">No students match these filters.</div>'; updateCertBar(); return; }
+      function chk(s) {
+        var on = !!state.sel[s.registrationId];
+        return '<td class="chk"><input type="checkbox" data-sel="' + e(s.registrationId) + '"' + (on ? ' checked' : '') + ' aria-label="Select ' + e(s.fullName) + '" /></td>';
+      }
+      $('s-table').innerHTML = '<table class="tbl rem-tbl"><thead><tr><th class="chk"><input type="checkbox" id="s-all" aria-label="Select all students shown" /></th><th>Unique ID</th><th>Name</th><th>College</th><th>Batch</th><th>Payment</th><th>Referred by</th><th class="num">Referred</th><th class="num">Cashback due</th></tr></thead><tbody>' +
         list.map(function (s) {
           if (isAmb(s)) {
-            return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="mono">' + e(s.registrationId) + '</td>' +
+            return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="chk"></td><td class="mono">' + e(s.registrationId) + '</td>' +
               '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
               '<td>' + AMB_TAG + '<br><span class="muted" style="font-size:.8rem">' + e(s.email) + '</span></td>' +
               '<td><span class="muted">—</span></td><td><span class="muted">No fee</span></td><td><span class="muted">—</span></td>' +
               '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
               '<td class="num">' + cashCell(s) + '</td></tr>';
           }
-          return '<tr class="click" data-id="' + e(s.registrationId) + '"><td class="mono">' + e(s.registrationId) + '</td>' +
+          return '<tr class="click' + (state.sel[s.registrationId] ? ' is-sel' : '') + '" data-id="' + e(s.registrationId) + '">' + chk(s) + '<td class="mono">' + e(s.registrationId) + '</td>' +
             '<td>' + e(s.fullName) + '<br><span class="muted" style="font-size:.8rem">' + e(s.phone) + '</span></td>' +
             '<td>' + e(s.college) + '<br><span class="muted" style="font-size:.8rem">' + e(s.degree) + ' · Yr ' + s.collegeYear + '</span></td>' +
             '<td>' + batchText(s) + (s.from ? '<br><span class="muted" style="font-size:.8rem">' + P.date(s.from) + '</span>' : '') + '</td>' +
-            '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') + '</td>' +
+            '<td>' + payTag(s, true) + (s.certificateHardcopy ? '<br><span class="tag blue" style="margin-top:4px">Hard copy</span>' : '') +
+              (s.certificateEnabled ? '<br><span class="tag green" style="margin-top:4px">Certificate enabled</span>' : '') + '</td>' +
             '<td>' + (s.referredBy ? e(s.referredBy.name) + '<br><span class="muted mono">' + e(s.referredBy.code) + '</span>' : '<span class="muted">—</span>') + '</td>' +
             '<td class="num">' + s.referredJoined + ' / ' + s.referredTotal + '</td>' +
             '<td class="num">' + cashCell(s) + '</td></tr>';
         }).join('') + '</tbody></table>';
-      $('s-table').querySelectorAll('tr[data-id]').forEach(function (tr) { tr.addEventListener('click', function () { openStudent(tr.dataset.id); }); });
+      $('s-table').querySelectorAll('tr[data-id]').forEach(function (tr) {
+        tr.addEventListener('click', function (ev) { if (!ev.target.closest('.chk')) openStudent(tr.dataset.id); });   // the tick box doesn't open the drawer
+      });
+      $('s-table').querySelectorAll('[data-sel]').forEach(function (c) {
+        c.addEventListener('change', function () {
+          if (c.checked) state.sel[c.dataset.sel] = true; else delete state.sel[c.dataset.sel];
+          c.closest('tr').classList.toggle('is-sel', c.checked);
+          updateCertBar();
+        });
+      });
+      $('s-all').addEventListener('change', function () {
+        var all = this.checked;
+        $('s-table').querySelectorAll('[data-sel]').forEach(function (c) {
+          c.checked = all; c.closest('tr').classList.toggle('is-sel', all);
+          if (all) state.sel[c.dataset.sel] = true; else delete state.sel[c.dataset.sel];
+        });
+        updateCertBar();
+      });
+      updateCertBar();
+    }
+
+    // ---------- Certificates: enable / disable for one student or the ticked students ----------
+    // A certificate can be enabled for a paid student (not an ambassador) with a confirmed batch.
+    // Same rule as the API: a demo (test-mode) payment counts only while real payments aren't switched on yet.
+    function canCertify(s) {
+      var paid = payState(s) === 'real' || (payState(s) === 'demo' && !(state.overview && state.overview.paymentsLive));
+      return !isAmb(s) && paid && s.dateMode !== 'later' && !!s.from;
+    }
+    var CERT_SKIP = { not_paid: 'not paid', demo_payment: 'demo payment only', no_batch: 'no batch chosen', ambassador: 'ambassador',
+      not_found: 'no longer registered', already_enabled: 'already enabled', not_enabled: 'not enabled' };
+    function selectedForCert() { return state.students.filter(function (x) { return state.sel[x.registrationId]; }); }
+    function updateCertBar() {
+      var bar = $('s-bulkbar'), sel = selectedForCert(), all = $('s-all');
+      if (all) {
+        var boxes = $('s-table').querySelectorAll('[data-sel]'), on = 0;
+        boxes.forEach(function (c) { if (c.checked) on++; });
+        all.checked = on > 0 && on === boxes.length; all.indeterminate = on > 0 && on < boxes.length;
+      }
+      if (!sel.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+      var can = sel.filter(function (x) { return canCertify(x) && !x.certificateEnabled; }).length;
+      var has = sel.filter(function (x) { return x.certificateEnabled; }).length;
+      var no = sel.length - can - has;
+      bar.innerHTML = '<div><strong>' + sel.length + ' selected</strong><span class="muted">' + can + ' can get a certificate' +
+        (has ? ' \u00b7 ' + has + ' already enabled' : '') + (no ? ' \u00b7 ' + no + ' not eligible (not paid or no batch)' : '') + '</span></div>' +
+        '<div class="rem-bulk-act">' +
+        '<button class="btn btn-primary btn-sm" type="button" id="sb-enable"' + (can ? '' : ' disabled') + '>Enable Certificate (' + can + ')</button>' +
+        (has ? '<button class="btn btn-ghost btn-sm" type="button" id="sb-disable">Disable Certificate (' + has + ')</button>' : '') +
+        '<button class="btn btn-ghost btn-sm" type="button" id="sb-clear">Clear</button></div>';
+      bar.hidden = false;
+      $('sb-enable').addEventListener('click', function () { setCertificates(sel, true); });
+      if (has) $('sb-disable').addEventListener('click', function () { setCertificates(sel, false); });
+      $('sb-clear').addEventListener('click', function () { state.sel = {}; renderStudents(); });
+    }
+    // list: students to change; enabled: true = enable, false = disable. after(): optional extra refresh (the drawer)
+    function setCertificates(list, enabled, after) {
+      var go = list.filter(function (x) { return enabled ? canCertify(x) && !x.certificateEnabled : x.certificateEnabled; });
+      var skip = list.length - go.length, one = go.length === 1, who = one ? e(go[0].fullName) : go.length + ' students';
+      if (!go.length) return;
+      confirmBox({
+        title: (enabled ? 'Enable' : 'Disable') + ' certificate' + (one ? '' : 's') + '?',
+        html: enabled
+          ? '<b>' + who + '</b> will see a <b>Download Certificate</b> button in the student portal, and ' + (one ? 'the certificate' : 'their certificates') + ' can be checked on the Verify certificate page.' +
+            (skip ? '<br>' + skip + ' selected ' + (skip === 1 ? 'student is' : 'students are') + ' skipped (already enabled, not paid, or no batch).' : '') +
+            '<br><span class="muted">Enable certificates only for students who completed the program.</span>'
+          : 'The <b>Download Certificate</b> button is removed for <b>' + who + '</b>, and ' + (one ? 'the certificate' : 'their certificates') + ' will no longer verify.' +
+            (skip ? '<br>' + skip + ' selected ' + (skip === 1 ? 'student has' : 'students have') + ' no certificate and ' + (skip === 1 ? 'is' : 'are') + ' skipped.' : ''),
+        okText: (enabled ? 'Enable' : 'Disable') + (one ? ' certificate' : ' ' + go.length + ' certificates'),
+        danger: !enabled,
+        onConfirm: function () {
+          return P.api('/admin/certificates/bulk', { body: { ids: go.map(function (x) { return x.registrationId; }), enabled: enabled }, auth: 'admin' }).then(function (r) {
+            return r.ok ? { ok: true, data: r.data } : { ok: false, message: r.data.message || 'Could not update certificates.' };
+          });
+        },
+        after: function (r) {
+          var d = r.data || {}, done = (d.updated || []).length, skipped = d.skipped || [];
+          var parts = ['Certificate ' + (enabled ? 'enabled' : 'disabled') + ' for ' + done + (done === 1 ? ' student.' : ' students.')];
+          if (skipped.length) parts.push(skipped.length + ' skipped (' + Object.keys(countBy(skipped, function (x) { return x.reason; })).map(function (k) { return CERT_SKIP[k] || k; }).join(', ') + ').');
+          state.sel = {};
+          P.msg($('m-cert'), parts.join(' '), skipped.length && !done ? 'err' : 'ok');
+          loadAll();
+          if (after) after();
+        }
+      });
     }
     ['q', 'f-type', 'f-batch', 'f-pay', 'f-ref', 'f-src', 'f-hc'].forEach(function (id) { $(id).addEventListener('input', renderStudents); });
 
@@ -675,8 +770,14 @@
             ['Batch', s.dateMode === 'custom' ? 'Custom dates' : batchText(s)],
             ['Dates', s.from ? P.date(s.from) + ' → ' + P.date(s.to) : 'Not chosen yet'],
             s.batchChosenAt ? ['Batch chosen in portal', P.date(s.batchChosenAt)] : null,
-            ['Certificate', s.certificateHardcopy ? 'Digital + printed hard copy (courier to home address)' : 'Digital']
+            ['Certificate', s.certificateHardcopy ? 'Digital + printed hard copy (courier to home address)' : 'Digital'],
+            ['Certificate download', s.certificateEnabled
+              ? '<span class="tag green">Enabled</span>' + (s.certificateIssuedOn ? ' <span class="muted" style="font-size:.8rem">issued ' + P.date(s.certificateIssuedOn) + '</span>' : '')
+              : '<span class="tag">Not enabled</span>' + (canCertify(s) ? '' : ' <span class="muted" style="font-size:.8rem">needs a payment and a confirmed batch</span>'), true],
           ]) +
+          (s.certificateEnabled
+            ? '<button class="btn btn-ghost btn-sm" id="btnCert" type="button" style="margin-top:14px">Disable Certificate</button>'
+            : '<button class="btn btn-primary btn-sm" id="btnCert" type="button" style="margin-top:14px"' + (canCertify(s) ? '' : ' disabled') + '>Enable Certificate</button>') +
           '<h3>Payment</h3>' + kv([
             ['Status', payTag(s, false) + (payState(s) === 'demo' ? ' <span class="muted" style="font-size:.8rem">Razorpay test mode \u2014 no real money</span>' : ''), true],
             s.paymentDone === 'Yes' ? ['Amount', P.inr(s.amountPaidInr)] : null,
@@ -748,6 +849,10 @@
         } else {
           $('btnDelete').addEventListener('click', function () { askDelete(detail); });
         }
+        var bc = $('btnCert');
+        if (bc) bc.addEventListener('click', function () {
+          setCertificates([s], !s.certificateEnabled, function () { openStudent(s.registrationId); });
+        });
         var rl = $('resetLogin');
         if (rl) rl.addEventListener('click', function () {
           confirmBox({
@@ -774,9 +879,9 @@
       a.download = name; document.body.appendChild(a); a.click(); a.remove();
     }
     $('csv-students').addEventListener('click', function () {
-      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due (payable now)', 'Cashback on hold', 'Cashback paid', 'Registered at', 'Certificate hard copy', 'Heard from', 'Heard from (other)', 'Batch chosen at']];
+      var rows = [['Unique ID', 'Registered as', 'Name', 'Father', 'DOB', 'Email', 'Phone', 'College', 'Degree', 'Course', 'Year', 'Address', 'Type', 'Batch', 'From', 'To', 'Payment status', 'Amount', 'Payment ID', 'Paid at', 'Own referral code', 'Referred by code', 'Referred by', 'Referred total', 'Referred paid', 'Cashback due (payable now)', 'Cashback on hold', 'Cashback paid', 'Registered at', 'Certificate hard copy', 'Heard from', 'Heard from (other)', 'Batch chosen at', 'Certificate enabled', 'Certificate issued on']];
       filteredStudents().forEach(function (s) {
-        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackOnHoldInr || 0, s.cashbackPaidInr, s.registeredAt, s.certificateHardcopy ? 'Yes' : 'No', SOURCES[s.heardFrom] || s.heardFrom, s.heardFromOther, s.batchChosenAt]);
+        rows.push([s.registrationId, isAmb(s) ? 'Student Ambassador' : 'Student', s.fullName, s.fatherName, s.dateOfBirth, s.email, s.phone, s.college, s.degree, s.course, s.collegeYear, s.homeAddress, isAmb(s) ? '' : s.dateMode, s.batchNumber || '', s.from, s.to, isAmb(s) ? 'No fee' : { real: 'Paid', demo: 'Demo paid', none: 'Not paid' }[payState(s)], s.amountPaidInr, s.paymentId, s.paidAt, s.referralCode, s.referredBy ? s.referredBy.code : '', s.referredBy ? s.referredBy.name : '', s.referredTotal, s.referredJoined, s.cashbackDueInr, s.cashbackOnHoldInr || 0, s.cashbackPaidInr, s.registeredAt, s.certificateHardcopy ? 'Yes' : 'No', SOURCES[s.heardFrom] || s.heardFrom, s.heardFromOther, s.batchChosenAt, s.certificateEnabled ? 'Yes' : 'No', s.certificateIssuedOn || '']);
       });
       download('internship-students.csv', csv(rows));
     });
